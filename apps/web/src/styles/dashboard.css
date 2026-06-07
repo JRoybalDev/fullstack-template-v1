@@ -1,0 +1,222 @@
+.dashboard-page {
+  padding: clamp(20px, 4vw, 48px);
+}
+
+.dashboard-header {
+  align-items: end;
+  display: flex;
+  gap: 24px;
+  justify-content: space-between;
+  margin-bottom: 28px;
+}
+
+.dashboard-header h1 {
+  color: var(--app-heading);
+  font-size: clamp(2rem, 4vw, 3.4rem);
+  line-height: 1.05;
+  margin: 8px 0 0;
+}
+
+.dashboard-layout {
+  align-items: start;
+  display: grid;
+  gap: 24px;
+  grid-template-columns: minmax(0, 1fr) 320px;
+}
+
+.access-page {
+  display: grid;
+  min-height: calc(100vh - 76px);
+  place-items: center;
+}
+
+.access-panel {
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  display: grid;
+  gap: 16px;
+  max-width: 440px;
+  padding: 28px;
+  width: min(100%, 440px);
+}
+
+.access-panel h1 {
+  color: var(--app-heading);
+  font-size: 2rem;
+  line-height: 1.08;
+  margin: 0;
+}
+
+.access-panel label {
+  display: grid;
+  gap: 8px;
+}
+
+.access-panel span {
+  color: var(--app-muted);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.access-panel input {
+  background: var(--app-bg);
+  border: 1px solid var(--app-border-strong);
+  border-radius: 8px;
+  color: var(--app-text);
+  min-height: 42px;
+  padding: 10px 12px;
+  width: 100%;
+}
+
+.access-icon {
+  align-items: center;
+  background: var(--app-surface-accent);
+  border: 1px solid var(--app-border-accent);
+  border-radius: 8px;
+  color: var(--app-accent);
+  display: inline-flex;
+  height: 44px;
+  justify-content: center;
+  width: 44px;
+}
+
+.access-error {
+  color: var(--app-danger);
+  margin: 0;
+}
+
+.editor-panel,
+.records-panel {
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  padding: 22px;
+}
+
+.editor-panel {
+  display: grid;
+  gap: 18px;
+}
+
+.editor-panel label,
+.admin-key {
+  display: grid;
+  gap: 8px;
+}
+
+.editor-panel span,
+.admin-key span {
+  color: var(--app-muted);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.editor-panel input,
+.editor-panel textarea,
+.editor-panel select,
+.admin-key input {
+  background: var(--app-bg);
+  border: 1px solid var(--app-border-strong);
+  border-radius: 8px;
+  color: var(--app-text);
+  min-height: 42px;
+  padding: 10px 12px;
+  width: 100%;
+}
+
+.field-row {
+  align-items: end;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: 1fr auto;
+}
+
+.links-header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.links-header h2,
+.records-panel h2 {
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+.link-editor {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 1fr 1.4fr 140px 42px;
+}
+
+.icon-button {
+  align-items: center;
+  background: var(--app-surface-accent);
+  border: 1px solid var(--app-border-accent);
+  border-radius: 8px;
+  color: var(--app-accent);
+  cursor: pointer;
+  display: inline-flex;
+  height: 42px;
+  justify-content: center;
+  width: 42px;
+}
+
+.icon-button.danger {
+  background: var(--app-surface-danger);
+  border-color: var(--app-border-danger);
+  color: var(--app-danger);
+}
+
+.form-errors p {
+  color: var(--app-danger);
+  margin: 0 0 6px;
+}
+
+.records-panel {
+  display: grid;
+  gap: 12px;
+  position: sticky;
+  top: 84px;
+}
+
+.record-row {
+  background: var(--app-surface-muted);
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  cursor: pointer;
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  text-align: left;
+}
+
+.record-row span {
+  color: var(--app-heading);
+  font-weight: 700;
+}
+
+.record-row small {
+  color: var(--app-muted);
+}
+
+@media (max-width: 920px) {
+  .dashboard-header,
+  .dashboard-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .link-editor {
+    grid-template-columns: 1fr;
+  }
+
+  .records-panel {
+    position: static;
+  }
+}
