@@ -11,10 +11,15 @@ export const UploadSchema = z.object({
   filename: z.string().min(1),
   url: z.string().min(1),
   thumbnailUrl: z.string().default(""),
+  storageProvider: z.enum(["local", "cloudinary"]).or(z.string()).default("local"),
+  storageKey: z.string().default(""),
+  storageResourceType: z.enum(["image", "video", "raw"]).or(z.string()).default("raw"),
   contentType: z.string().min(1),
   size: z.number().int().nonnegative(),
   createdAt: z.string().datetime()
 });
+
+export const UploadListSchema = z.array(UploadSchema);
 
 export const defaultSiteMetadata = {
   tabTitle: "",
@@ -71,16 +76,35 @@ export const SiteDraftSchema = SiteSchema.omit({
 
 export const SiteListSchema = z.array(SiteSchema);
 
-export const ApiErrorSchema = z.object({
-  error: z.string(),
-  details: z.unknown().optional()
+export const ApiMetaSchema = z.object({
+  requestId: z.string().optional()
 });
+
+export const ApiErrorSchema = z.object({
+  success: z.literal(false).default(false),
+  error: z.string(),
+  code: z.string().optional(),
+  details: z.unknown().optional(),
+  meta: ApiMetaSchema.optional()
+});
+
+export const ApiSuccessSchema = z.object({
+  success: z.literal(true),
+  data: z.unknown(),
+  meta: ApiMetaSchema.optional()
+});
+
+export const ApiResponseSchema = z.union([ApiSuccessSchema, ApiErrorSchema]);
 
 export type Link = z.infer<typeof LinkSchema>;
 export type Upload = z.infer<typeof UploadSchema>;
+export type UploadList = z.infer<typeof UploadListSchema>;
 export type SiteMetadata = z.infer<typeof SiteMetadataSchema>;
 export type SiteBranding = z.infer<typeof SiteBrandingSchema>;
 export type Site = z.infer<typeof SiteSchema>;
 export type SiteDraft = z.infer<typeof SiteDraftSchema>;
 export type SiteDraftInput = z.input<typeof SiteDraftSchema>;
+export type ApiMeta = z.infer<typeof ApiMetaSchema>;
 export type ApiError = z.infer<typeof ApiErrorSchema>;
+export type ApiSuccess = z.infer<typeof ApiSuccessSchema>;
+export type ApiResponse = z.infer<typeof ApiResponseSchema>;

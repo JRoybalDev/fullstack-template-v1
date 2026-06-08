@@ -1,4 +1,4 @@
-import { SiteDraftSchema, type Site, type SiteDraft, type SiteDraftInput } from "@fullstack-template/schema";
+import { SiteDraftSchema, type Site, type SiteDraft, type SiteDraftInput, type Upload } from "@fullstack-template/schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion, type Transition } from "framer-motion";
@@ -22,10 +22,13 @@ import {
   FiSettings,
   FiSun,
   FiTrash2,
+  FiUsers,
   FiX
 } from "react-icons/fi";
 import { Link } from "react-router-dom";
-import { apiClient } from "../shared/apiClient";
+import { authClient } from "../shared/authClient";
+import { apiClient, type AdminUser } from "../shared/apiClient";
+import { setDocumentTitle, siteConfig } from "../shared/siteConfig";
 import { useDraftStore } from "../state/draftStore";
 import { type ThemeMode, useThemeMode } from "../state/themeStore";
 
@@ -35,10 +38,8 @@ const defaultDraft: SiteDraftInput = {
   description: "Edit this content in the dashboard and publish it to the public page.",
   heroImageUrl: "",
   metadata: {
-    tabTitle: "",
     seoTitle: "",
     seoDescription: "",
-    faviconUrl: "",
     ogImageUrl: ""
   },
   branding: {
@@ -52,7 +53,7 @@ const defaultDraft: SiteDraftInput = {
   published: true
 };
 
-type DashboardTabId = "start" | "overview" | "content" | "metadata" | "branding" | "links" | "records" | "uploads" | "help";
+type DashboardTabId = "start" | "overview" | "metadata" | "branding" | "links" | "users" | "records" | "uploads" | "help";
 type DashboardGroupId = "site" | "library" | "support";
 
 type DashboardTab = {
@@ -74,10 +75,10 @@ const dashboardGroups: DashboardGroup[] = [
     tabs: [
       { id: "start", label: "Start Guide", icon: FiHelpCircle },
       { id: "overview", label: "Overview", icon: FiSettings },
-      { id: "content", label: "Content", icon: FiFileText },
       { id: "metadata", label: "Metadata", icon: FiSliders },
       { id: "branding", label: "Branding", icon: FiImage },
-      { id: "links", label: "Links", icon: FiLink }
+      { id: "links", label: "Links", icon: FiLink },
+      { id: "users", label: "Users", icon: FiUsers }
     ]
   },
   {
@@ -118,12 +119,25 @@ export function Dashboard() {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
   const [uploadMessage, setUploadMessage] = useState("");
+  const betterAuthSession = authClient.useSession();
+  const hasBetterAuthSession = Boolean(betterAuthSession.data?.session);
+  const hasAdminKey = adminKey.length > 0;
+  const currentUser = betterAuthSession.data?.user;
+
+  useEffect(() => {
+    setDocumentTitle(siteConfig.dashboardPageName);
+  }, []);
 
   const session = useQuery({
-    queryKey: ["admin-session", adminKey],
+    queryKey: ["admin-session", adminKey, hasBetterAuthSession],
     queryFn: () => apiClient.admin.verifySession(adminKey),
-    enabled: adminKey.length > 0,
+    enabled: hasAdminKey || hasBetterAuthSession,
     retry: false
+  });
+
+  const authConfig = useQuery({
+    queryKey: ["auth-config"],
+    queryFn: apiClient.auth.config
   });
 
   const form = useForm<SiteDraftInput, unknown, SiteDraft>({
@@ -176,6 +190,18 @@ export function Dashboard() {
     enabled: session.isSuccess
   });
 
+  const users = useQuery({
+    queryKey: ["admin-users"],
+    queryFn: () => apiClient.admin.listUsers(adminKey),
+    enabled: session.isSuccess
+  });
+
+  const uploads = useQuery({
+    queryKey: ["uploads"],
+    queryFn: () => apiClient.uploads.list(adminKey),
+    enabled: session.isSuccess
+  });
+
   const saveSite = useMutation({
     mutationFn: (draft: SiteDraft) => apiClient.admin.saveSite(adminKey, draft),
     onSuccess: (site) => {
@@ -189,18 +215,88 @@ export function Dashboard() {
     mutationFn: (file: File) => apiClient.uploads.create(adminKey, file),
     onSuccess: (upload) => {
       setUploadMessage(`Uploaded ${upload.filename}.`);
+      void queryClient.invalidateQueries({ queryKey: ["uploads"] });
       if (upload.thumbnailUrl || upload.url) {
         form.setValue("heroImageUrl", upload.thumbnailUrl || upload.url, { shouldDirty: true });
       }
     }
   });
 
+  const replaceUpload = useMutation({
+    mutationFn: (input: { uploadId: string; file: File }) => apiClient.uploads.replace(adminKey, input.uploadId, input.file),
+    onSuccess: (upload) => {
+      setUploadMessage(`Replaced ${upload.filename}.`);
+      void queryClient.invalidateQueries({ queryKey: ["uploads"] });
+    }
+  });
+
+  const deleteUpload = useMutation({
+    mutationFn: (uploadId: string) => apiClient.uploads.delete(adminKey, uploadId),
+    onSuccess: (upload) => {
+      setUploadMessage(`Deleted ${upload.filename}.`);
+      void queryClient.invalidateQueries({ queryKey: ["uploads"] });
+    }
+  });
+
+  const createUser = useMutation({
+    mutationFn: (input: { name: string; email: string; password: string; role: "admin" | "user" }) => apiClient.admin.createUser(adminKey, input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+    }
+  });
+
+  const updateUserRole = useMutation({
+    mutationFn: (input: { userId: string; role: "admin" | "user" }) => apiClient.admin.updateUserRole(adminKey, input.userId, { role: input.role }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["admin-users"] })
+  });
+
+  const banUser = useMutation({
+    mutationFn: (input: { userId: string; banReason?: string }) => apiClient.admin.banUser(adminKey, input.userId, { banReason: input.banReason }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["admin-users"] })
+  });
+
+  const unbanUser = useMutation({
+    mutationFn: (userId: string) => apiClient.admin.unbanUser(adminKey, userId),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["admin-users"] })
+  });
+
+  const setUserPassword = useMutation({
+    mutationFn: (input: { userId: string; newPassword: string }) => apiClient.admin.setUserPassword(adminKey, input.userId, { newPassword: input.newPassword }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["admin-users"] })
+  });
+
+  const revokeUserSessions = useMutation({
+    mutationFn: (userId: string) => apiClient.admin.revokeUserSessions(adminKey, userId),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["admin-users"] })
+  });
+
+  const deleteUser = useMutation({
+    mutationFn: (userId: string) => apiClient.admin.deleteUser(adminKey, userId),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["admin-users"] })
+  });
+
   const selectedSite = form.watch();
   const totalLinks = selectedSite.links?.length ?? 0;
   const publishedCount = sites.data?.filter((site) => site.published).length ?? 0;
 
+  async function lockDashboard() {
+    clearAdminKey();
+    if (hasBetterAuthSession) {
+      await authClient.signOut();
+    }
+    void queryClient.invalidateQueries({ queryKey: ["admin-session"] });
+  }
+
   if (!session.isSuccess) {
-    return <DashboardAccessGate isChecking={session.isLoading} isInvalid={session.isError} onUnlock={(code) => setAdminKey(code)} />;
+    return (
+      <DashboardAccessGate
+        isChecking={session.isLoading || betterAuthSession.isPending}
+        isInvalid={session.isError}
+        onBetterAuthChange={() => void queryClient.invalidateQueries({ queryKey: ["admin-session"] })}
+        signupMode={authConfig.data?.signupMode ?? "private"}
+        onUnlock={(code) => setAdminKey(code)}
+      />
+    );
   }
 
   function selectTab(tabId: DashboardTabId, shouldCloseMobileNav = false) {
@@ -226,7 +322,7 @@ export function Dashboard() {
       links: site.links,
       published: site.published
     });
-    setActiveTabId("content");
+    setActiveTabId("overview");
     setSaveMessage("");
   }
 
@@ -318,7 +414,14 @@ export function Dashboard() {
           </div>
         </div>
         {renderDashboardNav()}
-        <button className="dashboard-sidebar__clear" type="button" onClick={clearAdminKey}>
+        {currentUser ? (
+          <div className="dashboard-user-card">
+            <span>{String(currentUser.role ?? "user")}</span>
+            <strong>{currentUser.name || currentUser.email}</strong>
+            <small>{currentUser.email}</small>
+          </div>
+        ) : null}
+        <button className="dashboard-sidebar__clear" type="button" onClick={() => void lockDashboard()}>
           <FiLogOut aria-hidden /> Lock dashboard
         </button>
       </aside>
@@ -348,7 +451,14 @@ export function Dashboard() {
                 </button>
               </div>
               {renderDashboardNav(true)}
-              <button className="dashboard-sidebar__clear" type="button" onClick={clearAdminKey}>
+              {currentUser ? (
+                <div className="dashboard-user-card">
+                  <span>{String(currentUser.role ?? "user")}</span>
+                  <strong>{currentUser.name || currentUser.email}</strong>
+                  <small>{currentUser.email}</small>
+                </div>
+              ) : null}
+              <button className="dashboard-sidebar__clear" type="button" onClick={() => void lockDashboard()}>
                 <FiLogOut aria-hidden /> Lock dashboard
               </button>
             </motion.aside>
@@ -388,16 +498,43 @@ export function Dashboard() {
         <div className="dashboard-workspace__panel">
           {activeTab.id === "overview" ? <OverviewPanel selectedSite={selectedSite} saveMessage={saveMessage} saveError={saveSite.error?.message} /> : null}
           {activeTab.id === "start" ? <StartGuidePanel /> : null}
-          {activeTab.id === "content" ? <ContentPanel form={form} /> : null}
           {activeTab.id === "metadata" ? <MetadataPanel form={form} /> : null}
           {activeTab.id === "branding" ? <BrandingPanel form={form} /> : null}
           {activeTab.id === "links" ? <LinksPanel form={form} links={links} /> : null}
+          {activeTab.id === "users" ? (
+            <UsersPanel
+              error={createUser.error?.message}
+              isPending={createUser.isPending}
+              actionError={
+                updateUserRole.error?.message ||
+                banUser.error?.message ||
+                unbanUser.error?.message ||
+                setUserPassword.error?.message ||
+                revokeUserSessions.error?.message ||
+                deleteUser.error?.message
+              }
+              users={users.data ?? []}
+              onBan={(input) => banUser.mutate(input)}
+              onCreate={(input) => createUser.mutate(input)}
+              onDelete={(userId) => deleteUser.mutate(userId)}
+              onRevokeSessions={(userId) => revokeUserSessions.mutate(userId)}
+              onSetPassword={(input) => setUserPassword.mutate(input)}
+              onUnban={(userId) => unbanUser.mutate(userId)}
+              onUpdateRole={(input) => updateUserRole.mutate(input)}
+            />
+          ) : null}
           {activeTab.id === "records" ? <RecordsPanel isLoading={sites.isLoading} sites={sites.data ?? []} onSelect={loadSite} /> : null}
           {activeTab.id === "uploads" ? (
             <UploadsPanel
               isPending={uploadAsset.isPending}
+              isReplacing={replaceUpload.isPending}
+              isDeleting={deleteUpload.isPending}
               message={uploadMessage}
-              error={uploadAsset.error?.message}
+              error={uploadAsset.error?.message || replaceUpload.error?.message || deleteUpload.error?.message}
+              uploads={uploads.data ?? []}
+              isLoading={uploads.isLoading}
+              onDelete={(uploadId) => deleteUpload.mutate(uploadId)}
+              onReplace={(input) => replaceUpload.mutate(input)}
               onUpload={(file) => uploadAsset.mutate(file)}
             />
           ) : null}
@@ -449,7 +586,7 @@ function OverviewPanel({ selectedSite, saveMessage, saveError }: { selectedSite:
       <div>
         <p className="dashboard-eyebrow">Current draft</p>
         <h3>{selectedSite.title || "Untitled record"}</h3>
-        <p>{selectedSite.description || "Add a description in the Content tab."}</p>
+        <p>{selectedSite.description || "Static site content lives in code. Use this dashboard for metadata, branding, links, users, records, and media."}</p>
       </div>
       <div className="dashboard-preview">
         <div className="dashboard-preview__media">{selectedSite.heroImageUrl ? <img src={selectedSite.heroImageUrl} alt="" /> : <FiImage aria-hidden />}</div>
@@ -469,57 +606,30 @@ function StartGuidePanel() {
     <div className="start-guide-panel">
       <div>
         <p className="dashboard-eyebrow">Start here</p>
-        <h3>Launch checklist</h3>
-        <p>Work through these tabs from top to bottom to publish a clean first site record.</p>
+        <h3>Template setup checklist</h3>
+        <p>Use this dashboard for the operational pieces of a project. Public page content is intentionally edited in code so each project can have static, versioned pages.</p>
       </div>
       <ol>
         <li>
-          <strong>Content:</strong> Set the slug, title, hero image, description, and published status.
+          <strong>Copy and rename:</strong> Copy the template into a new folder, rename the package names, then create a fresh git repository.
         </li>
         <li>
-          <strong>Metadata:</strong> Add search title, search description, and Open Graph image.
+          <strong>Configure env:</strong> Copy `.env.example` to `.env`, choose `admin-key` or `better-auth`, and set database, email, storage, and security values.
         </li>
         <li>
-          <strong>Branding:</strong> Set the public site colors, browser tab title, and favicon.
+          <strong>Run the database:</strong> Start Postgres with `bun run db:up`, then run `cd apps/server && bunx drizzle-kit migrate`.
         </li>
         <li>
-          <strong>Links:</strong> Add calls to action and social links.
+          <strong>Set project identity:</strong> Edit `apps/web/src/shared/siteConfig.ts` for the site name, dashboard title, page-title format, and favicon.
         </li>
         <li>
-          <strong>Uploads:</strong> Upload images and use thumbnail URLs for small previews.
+          <strong>Build static pages:</strong> Add the real public content in React routes/components, then use Metadata, Branding, Links, and Uploads for supporting records and assets.
+        </li>
+        <li>
+          <strong>Verify the stack:</strong> Open `/docs` for API docs, run `bun run typecheck`, and run `bun run build` before handing off.
         </li>
       </ol>
     </div>
-  );
-}
-
-function ContentPanel({ form }: { form: ReturnType<typeof useForm<SiteDraftInput, unknown, SiteDraft>> }) {
-  return (
-    <form className="dashboard-form" onSubmit={(event) => event.preventDefault()}>
-      <div className="field-row">
-        <label>
-          <span>Slug</span>
-          <input {...form.register("slug")} />
-        </label>
-        <label className="toggle-field">
-          <span>Published</span>
-          <input type="checkbox" className="toggle" {...form.register("published")} />
-        </label>
-      </div>
-      <label>
-        <span>Title</span>
-        <input {...form.register("title")} />
-      </label>
-      <label>
-        <span>Description</span>
-        <textarea rows={6} {...form.register("description")} />
-      </label>
-      <label>
-        <span>Hero image URL</span>
-        <input {...form.register("heroImageUrl")} placeholder="https://..." />
-      </label>
-      <FormErrors errors={form.formState.errors} />
-    </form>
   );
 }
 
@@ -562,16 +672,6 @@ function BrandingPanel({ form }: { form: ReturnType<typeof useForm<SiteDraftInpu
         <p className="dashboard-eyebrow">Public site theme</p>
         <h3>Branding</h3>
       </div>
-      <div className="branding-browser-fields">
-        <label>
-          <span>Browser tab title</span>
-          <input {...form.register("metadata.tabTitle")} placeholder="Brand or campaign name" />
-        </label>
-        <label>
-          <span>Favicon URL</span>
-          <input {...form.register("metadata.faviconUrl")} placeholder="https://..." />
-        </label>
-      </div>
       <div className="color-grid">
         {fields.map(([field, label]) => (
           <label className="color-field" key={field}>
@@ -583,7 +683,9 @@ function BrandingPanel({ form }: { form: ReturnType<typeof useForm<SiteDraftInpu
           </label>
         ))}
       </div>
-      <p className="dashboard-note">These colors apply to the public site record after saving. The private dashboard keeps its own company palette.</p>
+      <p className="dashboard-note">
+        These colors apply to public site records after saving. Browser titles and the favicon are managed in `apps/web/src/shared/siteConfig.ts`.
+      </p>
       <FormErrors errors={form.formState.errors} />
     </div>
   );
@@ -626,6 +728,160 @@ function LinksPanel({
   );
 }
 
+function UsersPanel({
+  actionError,
+  error,
+  isPending,
+  users,
+  onBan,
+  onCreate,
+  onDelete,
+  onRevokeSessions,
+  onSetPassword,
+  onUnban,
+  onUpdateRole
+}: {
+  actionError?: string;
+  error?: string;
+  isPending: boolean;
+  users: AdminUser[];
+  onBan: (input: { userId: string; banReason?: string }) => void;
+  onCreate: (input: { name: string; email: string; password: string; role: "admin" | "user" }) => void;
+  onDelete: (userId: string) => void;
+  onRevokeSessions: (userId: string) => void;
+  onSetPassword: (input: { userId: string; newPassword: string }) => void;
+  onUnban: (userId: string) => void;
+  onUpdateRole: (input: { userId: string; role: "admin" | "user" }) => void;
+}) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [role, setRole] = useState<"admin" | "user">("user");
+
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    onCreate({ name: name.trim(), email: email.trim(), password, role });
+    setName("");
+    setEmail("");
+    setPassword("");
+    setRole("user");
+  }
+
+  return (
+    <div className="users-panel">
+      <form className="dashboard-form user-create-form" onSubmit={submit}>
+        <div>
+          <p className="dashboard-eyebrow">Access control</p>
+          <h3>Invite a user</h3>
+        </div>
+        <div className="field-row user-create-form__grid">
+          <label>
+            <span>Name</span>
+            <input autoComplete="name" onChange={(event) => setName(event.target.value)} value={name} />
+          </label>
+          <label>
+            <span>Email</span>
+            <input autoComplete="email" onChange={(event) => setEmail(event.target.value)} type="email" value={email} />
+          </label>
+          <label>
+            <span>Password</span>
+            <input autoComplete="new-password" onChange={(event) => setPassword(event.target.value)} type="password" value={password} />
+          </label>
+          <label>
+            <span>Role</span>
+            <select onChange={(event) => setRole(event.target.value === "admin" ? "admin" : "user")} value={role}>
+              <option value="user">User</option>
+              <option value="admin">Admin</option>
+            </select>
+          </label>
+        </div>
+        <button className="dashboard-action dashboard-action--primary" disabled={isPending || !name.trim() || !email.trim() || password.length < 8} type="submit">
+          {isPending ? "Creating..." : "Create user"}
+        </button>
+        {error ? <p className="dashboard-message dashboard-message--error">{error}</p> : null}
+        {actionError ? <p className="dashboard-message dashboard-message--error">{actionError}</p> : null}
+      </form>
+
+      <div className="records-grid users-list">
+        {users.map((user) => (
+          <UserManagementRow
+            key={user.id}
+            user={user}
+            onBan={onBan}
+            onDelete={onDelete}
+            onRevokeSessions={onRevokeSessions}
+            onSetPassword={onSetPassword}
+            onUnban={onUnban}
+            onUpdateRole={onUpdateRole}
+          />
+        ))}
+        {users.length === 0 ? <p>No users yet. Seed the first admin from env, then create users here.</p> : null}
+      </div>
+    </div>
+  );
+}
+
+function UserManagementRow({
+  user,
+  onBan,
+  onDelete,
+  onRevokeSessions,
+  onSetPassword,
+  onUnban,
+  onUpdateRole
+}: {
+  user: AdminUser;
+  onBan: (input: { userId: string; banReason?: string }) => void;
+  onDelete: (userId: string) => void;
+  onRevokeSessions: (userId: string) => void;
+  onSetPassword: (input: { userId: string; newPassword: string }) => void;
+  onUnban: (userId: string) => void;
+  onUpdateRole: (input: { userId: string; role: "admin" | "user" }) => void;
+}) {
+  const [role, setRole] = useState<"admin" | "user">(user.role === "admin" ? "admin" : "user");
+  const [newPassword, setNewPassword] = useState("");
+
+  return (
+    <div className="record-row user-row">
+      <div className="user-row__identity">
+        <span>{user.name}</span>
+        <small>
+          {user.email} - {user.role}
+          {user.banned ? " - banned" : ""}
+        </small>
+      </div>
+      <div className="user-row__actions">
+        <select onChange={(event) => setRole(event.target.value === "admin" ? "admin" : "user")} value={role}>
+          <option value="user">User</option>
+          <option value="admin">Admin</option>
+        </select>
+        <button type="button" onClick={() => onUpdateRole({ userId: user.id, role })}>
+          Save role
+        </button>
+        {user.banned ? (
+          <button type="button" onClick={() => onUnban(user.id)}>
+            Unban
+          </button>
+        ) : (
+          <button type="button" onClick={() => onBan({ userId: user.id, banReason: "Disabled by admin" })}>
+            Ban
+          </button>
+        )}
+        <button type="button" onClick={() => onRevokeSessions(user.id)}>
+          Revoke sessions
+        </button>
+        <input placeholder="New password" type="password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} />
+        <button disabled={newPassword.length < 8} type="button" onClick={() => onSetPassword({ userId: user.id, newPassword })}>
+          Set password
+        </button>
+        <button className="danger-text" type="button" onClick={() => onDelete(user.id)}>
+          Delete
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function RecordsPanel({ isLoading, sites, onSelect }: { isLoading: boolean; sites: Site[]; onSelect: (site: Site) => void }) {
   return (
     <div className="records-grid">
@@ -644,14 +900,26 @@ function RecordsPanel({ isLoading, sites, onSelect }: { isLoading: boolean; site
 }
 
 function UploadsPanel({
-  isPending,
-  message,
   error,
+  isDeleting,
+  isLoading,
+  isPending,
+  isReplacing,
+  message,
+  uploads,
+  onDelete,
+  onReplace,
   onUpload
 }: {
-  isPending: boolean;
-  message: string;
   error?: string;
+  isDeleting: boolean;
+  isLoading: boolean;
+  isPending: boolean;
+  isReplacing: boolean;
+  message: string;
+  uploads: Upload[];
+  onDelete: (uploadId: string) => void;
+  onReplace: (input: { uploadId: string; file: File }) => void;
   onUpload: (file: File) => void;
 }) {
   function upload(event: FormEvent<HTMLFormElement>) {
@@ -663,35 +931,132 @@ function UploadsPanel({
     }
   }
 
+  function replace(event: FormEvent<HTMLFormElement>, uploadId: string) {
+    event.preventDefault();
+    const file = new FormData(event.currentTarget).get("file");
+    if (file instanceof File && file.size > 0) {
+      onReplace({ uploadId, file });
+      event.currentTarget.reset();
+    }
+  }
+
+  async function copyUrl(url: string) {
+    await navigator.clipboard.writeText(url);
+  }
+
+  const busy = isPending || isReplacing || isDeleting;
+
   return (
-    <form className="upload-panel" onSubmit={upload}>
-      <div className="upload-dropzone">
+    <div className="upload-panel">
+      <form className="upload-dropzone" onSubmit={upload}>
         <FiImage aria-hidden />
         <div>
-          <h3>Upload an image</h3>
-          <p>Images automatically generate optimized thumbnails for previews and cards.</p>
+          <h3>Upload media</h3>
+          <p>Images generate optimized thumbnails. Cloudinary replacements clean up the old asset automatically.</p>
         </div>
-        <input accept="image/*" name="file" type="file" />
-      </div>
-      <button className="dashboard-action dashboard-action--primary" disabled={isPending} type="submit">
-        {isPending ? "Uploading..." : "Upload asset"}
-      </button>
+        <input accept="image/*,video/*" name="file" type="file" />
+        <button className="dashboard-action dashboard-action--primary" disabled={isPending} type="submit">
+          {isPending ? "Uploading..." : "Upload asset"}
+        </button>
+      </form>
       {message ? <p className="dashboard-message dashboard-message--success">{message}</p> : null}
       {error ? <p className="dashboard-message dashboard-message--error">{error}</p> : null}
-    </form>
+      {isLoading ? <p>Loading uploads...</p> : null}
+      <div className="media-grid">
+        {uploads.map((upload) => {
+          const previewUrl = upload.thumbnailUrl || upload.url;
+          const isImage = upload.contentType.startsWith("image/");
+          const isVideo = upload.contentType.startsWith("video/");
+
+          return (
+            <article className="media-card" key={upload.id}>
+              <div className="media-card__preview">
+                {isImage ? <img src={previewUrl} alt="" /> : null}
+                {isVideo ? <video src={upload.url} muted playsInline controls /> : null}
+                {!isImage && !isVideo ? <FiFileText aria-hidden /> : null}
+              </div>
+              <div className="media-card__body">
+                <div>
+                  <strong>{upload.filename}</strong>
+                  <small>
+                    {formatBytes(upload.size)} - {upload.storageProvider}
+                  </small>
+                </div>
+                <div className="media-card__urls">
+                  <button type="button" onClick={() => void copyUrl(upload.url)}>
+                    Copy URL
+                  </button>
+                  {upload.thumbnailUrl ? (
+                    <button type="button" onClick={() => void copyUrl(upload.thumbnailUrl)}>
+                      Copy thumbnail
+                    </button>
+                  ) : null}
+                </div>
+                <form className="media-card__replace" onSubmit={(event) => replace(event, upload.id)}>
+                  <input accept="image/*,video/*" name="file" type="file" />
+                  <button disabled={busy} type="submit">
+                    {isReplacing ? "Replacing..." : "Replace"}
+                  </button>
+                </form>
+                <button className="danger-text" disabled={busy} type="button" onClick={() => onDelete(upload.id)}>
+                  Delete upload
+                </button>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+      {!isLoading && uploads.length === 0 ? <p>No uploads yet.</p> : null}
+    </div>
   );
+}
+
+function formatBytes(bytes: number) {
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  }
+
+  if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(1)} KB`;
+  }
+
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function HelpPanel() {
   return (
     <div className="help-panel">
-      <h3>Dashboard guide</h3>
-      <p>Use Content for the current page record, Links for calls to action, Records to switch between saved pages, and Uploads for optimized image assets.</p>
-      <ul>
-        <li>Public pages only show records marked published.</li>
-        <li>Protected requests use the environment access code as `X-Admin-Key`.</li>
-        <li>Use generated thumbnail URLs for small image previews.</li>
-      </ul>
+      <div>
+        <p className="dashboard-eyebrow">Support</p>
+        <h3>Setup and troubleshooting</h3>
+        <p>These are the first places to check when bringing the template into a new client or product project.</p>
+      </div>
+      <ol>
+        <li>
+          <strong>Local stack:</strong> Run `bun install` in every Bun context, copy `.env.example` to `.env`, start Postgres with `bun run db:up`, migrate, then run
+          `bun run dev`.
+        </li>
+        <li>
+          <strong>Auth:</strong> Keep `AUTH_MODE=admin-key` for simple projects. Switch to `better-auth` when you need accounts, roles, password reset, and user
+          management.
+        </li>
+        <li>
+          <strong>Site identity:</strong> Change the site name, dashboard page title, page-title format, and favicon in `apps/web/src/shared/siteConfig.ts`.
+        </li>
+        <li>
+          <strong>Static content:</strong> Public page copy and layout live in React code. This dashboard manages metadata, colors, links, users, records, and uploads.
+        </li>
+        <li>
+          <strong>Uploads:</strong> Use local storage for development or Cloudinary for production. Replace/delete actions clean up old stored assets when metadata is
+          available.
+        </li>
+        <li>
+          <strong>API reference:</strong> Open `http://localhost:3001/docs` for Swagger UI or `http://localhost:3001/openapi.json` for the OpenAPI document.
+        </li>
+        <li>
+          <strong>Before handoff:</strong> Run `bun run typecheck`, `bun run build`, verify `/health`, and test dashboard unlock plus upload management.
+        </li>
+      </ol>
     </div>
   );
 }
@@ -714,36 +1079,146 @@ function FormErrors({ errors }: { errors: ReturnType<typeof useForm<SiteDraftInp
 function DashboardAccessGate({
   isChecking,
   isInvalid,
+  onBetterAuthChange,
+  signupMode,
   onUnlock
 }: {
   isChecking: boolean;
   isInvalid: boolean;
+  onBetterAuthChange: () => void;
+  signupMode: "private" | "public";
   onUnlock: (code: string) => void;
 }) {
+  const [authPreset, setAuthPreset] = useState<"admin-key" | "better-auth">("admin-key");
   const [code, setCode] = useState("");
+  const [authIntent, setAuthIntent] = useState<"signin" | "signup" | "reset">("signin");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [authMessage, setAuthMessage] = useState("");
+  const [authError, setAuthError] = useState("");
+  const [isAuthPending, setIsAuthPending] = useState(false);
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     onUnlock(code.trim());
   }
 
+  async function submitBetterAuth(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setAuthError("");
+    setAuthMessage("");
+    setIsAuthPending(true);
+
+    try {
+      if (authIntent === "reset") {
+        await apiClient.auth.requestPasswordReset(email.trim(), `${window.location.origin}/reset-password`);
+        setAuthMessage("If that email exists, a reset link has been sent.");
+        return;
+      }
+
+      const result =
+        authIntent === "signup"
+          ? await authClient.signUp.email({
+              name: name.trim() || email,
+              email: email.trim(),
+              password
+            })
+          : await authClient.signIn.email({
+              email: email.trim(),
+              password
+            });
+
+      if (result.error) {
+        setAuthError(result.error.message ?? "Authentication failed.");
+        return;
+      }
+
+      setAuthMessage(authIntent === "signup" ? "Account created. Unlocking dashboard..." : "Signed in. Unlocking dashboard...");
+      onBetterAuthChange();
+    } catch (caught) {
+      setAuthError(caught instanceof Error ? caught.message : "Authentication failed.");
+    } finally {
+      setIsAuthPending(false);
+    }
+  }
+
+  const authIsChecking = isChecking || isAuthPending;
+
   return (
     <section className="dashboard-gate">
-      <form className="dashboard-gate__panel" onSubmit={submit}>
+      <div className="dashboard-gate__panel">
         <div className="dashboard-gate__mark">
           <FiLock aria-hidden />
         </div>
         <span className="dashboard-eyebrow">Private dashboard</span>
         <h1>Dashboard access</h1>
-        <label>
-          <span>Access code</span>
-          <input autoComplete="current-password" autoFocus disabled={isChecking} onChange={(event) => setCode(event.target.value)} type="password" value={code} />
-        </label>
-        {isInvalid ? <p className="dashboard-message dashboard-message--error">That code does not match the server environment.</p> : null}
-        <button disabled={code.trim().length === 0 || isChecking} type="submit">
-          {isChecking ? "Checking..." : "Unlock dashboard"}
-        </button>
-      </form>
+        <div className="auth-preset-toggle" role="tablist" aria-label="Authentication presets">
+          <button aria-selected={authPreset === "admin-key"} role="tab" type="button" onClick={() => setAuthPreset("admin-key")}>
+            Admin key
+          </button>
+          <button aria-selected={authPreset === "better-auth"} role="tab" type="button" onClick={() => setAuthPreset("better-auth")}>
+            Better Auth
+          </button>
+        </div>
+
+        {authPreset === "admin-key" ? (
+          <form className="dashboard-gate__form" onSubmit={submit}>
+            <p className="dashboard-note">Simple preset for small projects. Uses the server `ADMIN_KEY` and `X-Admin-Key` on protected requests.</p>
+            <label>
+              <span>Access code</span>
+              <input autoComplete="current-password" autoFocus disabled={authIsChecking} onChange={(event) => setCode(event.target.value)} type="password" value={code} />
+            </label>
+            {isInvalid ? <p className="dashboard-message dashboard-message--error">That code does not match the server environment.</p> : null}
+            <button disabled={code.trim().length === 0 || authIsChecking} type="submit">
+              {authIsChecking ? "Checking..." : "Unlock dashboard"}
+            </button>
+          </form>
+        ) : (
+          <form className="dashboard-gate__form" onSubmit={(event) => void submitBetterAuth(event)}>
+            <p className="dashboard-note">
+              {signupMode === "public"
+                ? "Large-project preset. Public signup is enabled by server env."
+                : "Large-project preset. Signup is private by default, so admins create users from the dashboard."}
+            </p>
+            {signupMode === "public" ? (
+              <div className="auth-intent-toggle" role="tablist" aria-label="Better Auth action">
+                <button aria-selected={authIntent === "signin"} role="tab" type="button" onClick={() => setAuthIntent("signin")}>
+                  Sign in
+                </button>
+                <button aria-selected={authIntent === "signup"} role="tab" type="button" onClick={() => setAuthIntent("signup")}>
+                  Sign up
+                </button>
+              </div>
+            ) : null}
+            {signupMode === "public" && authIntent === "signup" ? (
+              <label>
+                <span>Name</span>
+                <input autoComplete="name" disabled={authIsChecking} onChange={(event) => setName(event.target.value)} value={name} />
+              </label>
+            ) : null}
+            <label>
+              <span>Email</span>
+              <input autoComplete="email" disabled={authIsChecking} onChange={(event) => setEmail(event.target.value)} type="email" value={email} />
+            </label>
+            {authIntent !== "reset" ? (
+              <label>
+                <span>Password</span>
+                <input autoComplete={authIntent === "signup" ? "new-password" : "current-password"} disabled={authIsChecking} onChange={(event) => setPassword(event.target.value)} type="password" value={password} />
+              </label>
+            ) : null}
+            {authError ? <p className="dashboard-message dashboard-message--error">{authError}</p> : null}
+            {authMessage ? <p className="dashboard-message dashboard-message--success">{authMessage}</p> : null}
+            {isInvalid ? <p className="dashboard-message dashboard-message--error">The server rejected the session. Check `AUTH_MODE` and Better Auth env values.</p> : null}
+            <button disabled={email.trim().length === 0 || (authIntent !== "reset" && password.length < 8) || authIsChecking} type="submit">
+              {authIsChecking ? "Checking..." : authIntent === "reset" ? "Send reset link" : signupMode === "public" && authIntent === "signup" ? "Create account" : "Sign in"}
+            </button>
+            <button className="dashboard-gate__text-button" type="button" onClick={() => setAuthIntent((current) => (current === "reset" ? "signin" : "reset"))}>
+              {authIntent === "reset" ? "Back to sign in" : "Reset password"}
+            </button>
+          </form>
+        )}
+      </div>
     </section>
   );
 }

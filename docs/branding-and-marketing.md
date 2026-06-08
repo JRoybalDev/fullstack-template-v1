@@ -12,28 +12,52 @@ http://localhost:5173/dashboard
 
 Enter the dashboard access code provided by the developer or project owner. This code is stored as `ADMIN_KEY` on the server.
 
-The dashboard opens on a Start Guide tab with the recommended setup order for a new site record.
+The dashboard opens on a Start Guide tab with the recommended setup order for a new template project.
 
 ## Public Site Content
 
-The dashboard manages public site records. A record can include:
+Public page content is added statically in React code so it can be reviewed, versioned, and customized per project. Developers usually edit route/components under:
 
-- Slug
-- Title
-- Description
-- Hero image URL
-- Links
-- Published status
+```txt
+apps/web/src/routes
+```
 
-Only published records appear on the public site.
+The dashboard is still useful for supporting site data such as metadata, colors, links, users, records, and uploaded media.
+
+## Site Name, Page Titles, And Favicon
+
+The site name, page-title format, dashboard title, and shared favicon are configured in code:
+
+```txt
+apps/web/src/shared/siteConfig.ts
+apps/web/public/favicon.svg
+```
+
+The default title pattern is:
+
+```txt
+Site Name | Page Name
+```
+
+The dashboard uses:
+
+```txt
+Site Name | Dashboard
+```
+
+The favicon stays the same across the site unless a developer changes `faviconHref` in `siteConfig.ts`.
 
 ## Images And Thumbnails
 
-When images are uploaded through the API, the server stores the original file and creates a smaller WebP thumbnail.
+Use the dashboard Uploads tab to add, copy, replace, and delete image or video assets.
+
+When images are uploaded, the server stores the original file and creates a smaller WebP thumbnail.
 
 Use thumbnails for previews, cards, and lists. They load faster and avoid using the full original image size in small spaces.
 
 Use original images only when the user needs the full-size asset.
+
+If the project uses Cloudinary storage, replacing or deleting an upload also removes the old Cloudinary asset so the account does not fill up with unused edited versions.
 
 ## Brand Colors And Themes
 
@@ -72,17 +96,15 @@ When changing public site colors, update `branding.css` first. When changing onl
 
 ## Dashboard Branding Tab
 
-The dashboard also includes a Branding tab for client-editable public site colors. These colors are saved with the site record and can be changed without editing code:
+The dashboard includes a Branding tab for client-editable public site colors. These colors are saved with the site record and can be changed without editing code:
 
-- Browser tab title
-- Favicon URL
 - Background
 - Surface
 - Body text
 - Headings
 - Accent
 
-These saved colors affect the public site record after saving. They do not change the private dashboard's company-branded palette.
+These saved colors affect the public site record after saving. They do not change browser titles, the shared favicon, or the private dashboard's company-branded palette.
 
 ## Dashboard Metadata Tab
 
@@ -130,4 +152,5 @@ Check:
 - The description is not too long.
 - Links open the intended pages.
 - Thumbnail images look clear.
+- Replaced or deleted uploads are no longer used by live content.
 - Light and dark themes both look readable.

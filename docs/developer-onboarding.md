@@ -18,12 +18,10 @@ cd ../web && bun install
 cd ../..
 ```
 
-Create env files:
+Create the single project env file:
 
 ```bash
 cp .env.example .env
-cp apps/server/.env.example apps/server/.env
-cp apps/web/.env.example apps/web/.env
 ```
 
 Start Postgres:
@@ -51,6 +49,8 @@ bun run dev
 - Public site: `http://localhost:5173`
 - Dashboard: `http://localhost:5173/dashboard`
 - API health: `http://localhost:3001/health`
+- API docs: `http://localhost:3001/docs`
+- OpenAPI JSON: `http://localhost:3001/openapi.json`
 
 ## Common Workflows
 
@@ -80,11 +80,46 @@ cd apps/server
 bun run db:migrate
 ```
 
+Seed the first Better Auth admin:
+
+```bash
+bun run db:seed
+```
+
+This requires `AUTH_MODE=better-auth`, `BETTER_AUTH_BOOTSTRAP_ADMIN_EMAIL`, and `BETTER_AUTH_BOOTSTRAP_ADMIN_PASSWORD`.
+
 ## Important Concepts
 
 The shared schema package is the contract between the web app and server. Add or change validation in `packages/schema/src/index.ts` first, then update server routes and frontend forms to match.
 
-Protected dashboard and write requests use the `ADMIN_KEY` environment variable. The dashboard asks for this value as an access code and sends it as the `X-Admin-Key` header.
+Public page content is static by default and should be edited in React routes/components. The dashboard intentionally does not include a Content tab; it focuses on setup, metadata, branding colors, links, users, records, and upload management.
+
+Site identity is code-configured in `apps/web/src/shared/siteConfig.ts`. Change the site name, default page name, dashboard page name, page-title format, and favicon path there. The default convention is `Site Name | Page Name`, with the dashboard using `Site Name | Dashboard`.
+
+Protected dashboard and write requests use the auth preset configured by `AUTH_MODE`. Keep `AUTH_MODE=admin-key` for simple projects that only need an access code, or switch to `AUTH_MODE=better-auth` for email/password accounts backed by Better Auth sessions and admin roles. The template default keeps Better Auth signup private; admins create users from the dashboard Users tab. See [Auth Presets](./auth-presets.md).
 
 Uploads store the original file and generate optimized WebP thumbnails for supported image files. Use `thumbnailUrl` for thumbnail displays instead of the original `url`.
 
+For production uploads, switch `STORAGE_DRIVER=cloudinary` and set the Cloudinary credentials in `.env`. The database keeps the returned public URL, so the frontend does not need to know which storage driver is active.
+
+The dashboard Uploads tab can list, replace, and delete media. Replacing or deleting an upload removes the old local or Cloudinary asset when storage metadata is available.
+
+API routes return a standard envelope:
+
+```json
+{
+  "success": true,
+  "data": {},
+  "meta": {
+    "requestId": "..."
+  }
+}
+```
+
+Errors use the same shape with `success: false`, `error`, optional `code`, optional `details`, and the same request metadata. The web `apiJson` helper unwraps successful `data` automatically.
+
+Every request receives an `X-Request-Id` response header and a structured JSON log line with method, path, status, and duration.
+
+OpenAPI docs are served from `/docs`, and the source spec lives in `apps/server/src/openapi.ts`. Update that file whenever you add or rename API routes.
+
+Security headers are applied in `apps/server/src/middleware/securityHeaders.ts`. If you add analytics, embedded frames, or third-party asset hosts, update the CSP there and keep the change deliberate.

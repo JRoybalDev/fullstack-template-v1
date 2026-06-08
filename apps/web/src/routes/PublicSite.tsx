@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { type CSSProperties, useEffect } from "react";
 import { FiExternalLink } from "react-icons/fi";
 import { apiClient } from "../shared/apiClient";
+import { setDocumentTitle, setSiteFavicon } from "../shared/siteConfig";
 
 export function PublicSite() {
   const { data, isLoading, error } = useQuery({
@@ -16,18 +17,18 @@ export function PublicSite() {
 
   useEffect(() => {
     if (!featured) {
+      setDocumentTitle();
+      setSiteFavicon();
       return;
     }
 
-    const title = featured.metadata.tabTitle || featured.metadata.seoTitle || featured.title;
+    const pageName = featured.metadata.seoTitle || featured.title;
     const description = featured.metadata.seoDescription || featured.description;
-    document.title = title;
+    setDocumentTitle(pageName);
+    setSiteFavicon();
     setMetaTag("description", description);
-    setMetaProperty("og:title", title);
+    setMetaProperty("og:title", pageName);
     setMetaProperty("og:description", description);
-    if (featured.metadata.faviconUrl) {
-      setFavicon(featured.metadata.faviconUrl);
-    }
     if (featured.metadata.ogImageUrl) {
       setMetaProperty("og:image", featured.metadata.ogImageUrl);
     }
@@ -109,16 +110,6 @@ function setMetaProperty(property: string, content: string) {
     document.head.append(element);
   }
   element.content = content;
-}
-
-function setFavicon(href: string) {
-  let element = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
-  if (!element) {
-    element = document.createElement("link");
-    element.rel = "icon";
-    document.head.append(element);
-  }
-  element.href = href;
 }
 
 function SiteCard({ site }: { site: Site }) {

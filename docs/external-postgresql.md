@@ -18,19 +18,20 @@ Some providers require SSL. If they provide a connection string with query param
 postgres://user:password@host:5432/database?sslmode=require
 ```
 
-## 2. Update Server Env
+## 2. Update Root Env
 
-In `apps/server/.env`, set:
+This template uses one root `.env` file for Docker Compose, Drizzle, the Bun API, and Vite. In `.env`, set:
 
 ```txt
 DATABASE_URL=postgres://user:password@host:5432/database?sslmode=require
+AUTH_MODE=admin-key
 ADMIN_KEY=replace-with-a-long-random-secret
 PORT=3001
 UPLOAD_DIR=uploads
 PUBLIC_API_URL=http://localhost:3001
 ```
 
-The root `.env` is mainly used by Docker Compose and local scripts. The API server reads `apps/server/.env` when started from `apps/server`.
+For Better Auth projects, also set the Better Auth fields from [Auth Presets](./auth-presets.md).
 
 ## 3. Run Migrations
 
@@ -42,6 +43,8 @@ bunx drizzle-kit migrate
 ```
 
 Drizzle reads `DATABASE_URL` from the environment and applies migrations to that database.
+
+Current migrations include Better Auth tables and upload storage metadata for media replacement cleanup.
 
 ## 4. Verify The API
 
@@ -56,6 +59,7 @@ Open:
 
 ```txt
 http://localhost:3001/health
+http://localhost:3001/docs
 ```
 
 Then verify a protected route with the same value as `ADMIN_KEY`:
@@ -71,4 +75,3 @@ Use local Docker Postgres for development when you want disposable local data.
 Use external Postgres when you need shared development data, staging, production, backups, or provider-managed operations.
 
 Do not point local experiments at production unless you intentionally want to modify production data.
-
