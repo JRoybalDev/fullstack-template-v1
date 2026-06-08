@@ -22,6 +22,9 @@ export function toUpload(row: UploadRow): Upload {
     filename: row.filename,
     url: row.url,
     thumbnailUrl: row.thumbnailUrl,
+    storageProvider: row.storageProvider,
+    storageKey: row.storageKey,
+    storageResourceType: row.storageResourceType,
     contentType: row.contentType,
     size: row.size,
     createdAt: row.createdAt.toISOString()

@@ -3,14 +3,16 @@ import { and, desc, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { db } from "../db";
 import { sites } from "../../db/schema";
+import { fail, ok } from "../http/response";
 import { toSite } from "../mappers";
 import { requireAdminKey } from "../middleware/admin";
+import type { AppVariables } from "../types";
 
-export const sitesRoute = new Hono();
+export const sitesRoute = new Hono<{ Variables: AppVariables }>();
 
 sitesRoute.get("/", async (c) => {
   const rows = await db.select().from(sites).where(eq(sites.published, true)).orderBy(desc(sites.updatedAt));
-  return c.json(rows.map(toSite));
+  return ok(c, rows.map(toSite));
 });
 
 sitesRoute.get("/:slug", async (c) => {
@@ -18,10 +20,10 @@ sitesRoute.get("/:slug", async (c) => {
   const [site] = await db.select().from(sites).where(and(eq(sites.slug, slug), eq(sites.published, true))).limit(1);
 
   if (!site) {
-    return c.json({ error: "Site not found" }, 404);
+    return fail(c, "Site not found", 404, { code: "SITE_NOT_FOUND" });
   }
 
-  return c.json(toSite(site));
+  return ok(c, toSite(site));
 });
 
 sitesRoute.post("/", requireAdminKey, async (c) => {
@@ -29,7 +31,7 @@ sitesRoute.post("/", requireAdminKey, async (c) => {
   const parsed = SiteDraftSchema.safeParse(body);
 
   if (!parsed.success) {
-    return c.json({ error: "Invalid site payload", details: parsed.error.flatten() }, 400);
+    return fail(c, "Invalid site payload", 400, { code: "SITE_INVALID", details: parsed.error.flatten() });
   }
 
   const [site] = await db
@@ -54,10 +56,10 @@ sitesRoute.post("/", requireAdminKey, async (c) => {
     .returning();
 
   if (!site) {
-    return c.json({ error: "Site was not saved" }, 500);
+    return fail(c, "Site was not saved", 500, { code: "SITE_SAVE_FAILED" });
   }
 
-  return c.json(toSite(site), 201);
+  return ok(c, toSite(site), 201);
 });
 
 sitesRoute.delete("/:slug", requireAdminKey, async (c) => {
@@ -65,8 +67,8 @@ sitesRoute.delete("/:slug", requireAdminKey, async (c) => {
   const [deleted] = await db.delete(sites).where(eq(sites.slug, slug)).returning();
 
   if (!deleted) {
-    return c.json({ error: "Site not found" }, 404);
+    return fail(c, "Site not found", 404, { code: "SITE_NOT_FOUND" });
   }
 
-  return c.json(toSite(deleted));
+  return ok(c, toSite(deleted));
 });
