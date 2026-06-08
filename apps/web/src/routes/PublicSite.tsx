@@ -1,17 +1,37 @@
-import { SiteListSchema, type Site } from "@fullstack-template/schema";
+import { type Site } from "@fullstack-template/schema";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
+import { type CSSProperties, useEffect } from "react";
 import { FiExternalLink } from "react-icons/fi";
-import { apiJson } from "../shared/api";
+import { apiClient } from "../shared/apiClient";
 
 export function PublicSite() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["sites"],
-    queryFn: async () => SiteListSchema.parse(await apiJson("/api/sites"))
+    queryFn: () => apiClient.sites.listPublic()
   });
 
   const publishedSites = data?.filter((site) => site.published) ?? [];
   const featured = publishedSites[0];
+
+  useEffect(() => {
+    if (!featured) {
+      return;
+    }
+
+    const title = featured.metadata.tabTitle || featured.metadata.seoTitle || featured.title;
+    const description = featured.metadata.seoDescription || featured.description;
+    document.title = title;
+    setMetaTag("description", description);
+    setMetaProperty("og:title", title);
+    setMetaProperty("og:description", description);
+    if (featured.metadata.faviconUrl) {
+      setFavicon(featured.metadata.faviconUrl);
+    }
+    if (featured.metadata.ogImageUrl) {
+      setMetaProperty("og:image", featured.metadata.ogImageUrl);
+    }
+  }, [featured]);
 
   if (isLoading) {
     return <div className="public-empty">Loading public site...</div>;
@@ -22,7 +42,7 @@ export function PublicSite() {
   }
 
   return (
-    <section className="public-page">
+    <section className="public-page" style={featured ? getPublicBrandingStyle(featured) : undefined}>
       <div className="public-hero">
         <div className="public-hero-copy">
           <span className="eyebrow">React 19 + Bun + Hono + Drizzle</span>
@@ -53,6 +73,52 @@ export function PublicSite() {
       </div>
     </section>
   );
+}
+
+function getPublicBrandingStyle(site: Site): CSSProperties {
+  return {
+    "--app-bg": site.branding.backgroundColor,
+    "--app-surface": site.branding.surfaceColor,
+    "--app-surface-muted": site.branding.surfaceColor,
+    "--app-text": site.branding.textColor,
+    "--app-heading": site.branding.headingColor,
+    "--app-muted": site.branding.textColor,
+    "--app-accent": site.branding.accentColor,
+    "--app-accent-strong": site.branding.accentColor,
+    "--app-surface-accent": site.branding.surfaceColor,
+    background: site.branding.backgroundColor,
+    color: site.branding.textColor
+  } as CSSProperties;
+}
+
+function setMetaTag(name: string, content: string) {
+  let element = document.querySelector<HTMLMetaElement>(`meta[name="${name}"]`);
+  if (!element) {
+    element = document.createElement("meta");
+    element.name = name;
+    document.head.append(element);
+  }
+  element.content = content;
+}
+
+function setMetaProperty(property: string, content: string) {
+  let element = document.querySelector<HTMLMetaElement>(`meta[property="${property}"]`);
+  if (!element) {
+    element = document.createElement("meta");
+    element.setAttribute("property", property);
+    document.head.append(element);
+  }
+  element.content = content;
+}
+
+function setFavicon(href: string) {
+  let element = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+  if (!element) {
+    element = document.createElement("link");
+    element.rel = "icon";
+    document.head.append(element);
+  }
+  element.href = href;
 }
 
 function SiteCard({ site }: { site: Site }) {

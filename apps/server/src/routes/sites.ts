@@ -44,6 +44,8 @@ sitesRoute.post("/", requireAdminKey, async (c) => {
         title: parsed.data.title,
         description: parsed.data.description,
         heroImageUrl: parsed.data.heroImageUrl,
+        metadata: parsed.data.metadata,
+        branding: parsed.data.branding,
         links: parsed.data.links,
         published: parsed.data.published,
         updatedAt: new Date()

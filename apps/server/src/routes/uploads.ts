@@ -6,6 +6,7 @@ import { env } from "../env";
 import { uploads } from "../../db/schema";
 import { toUpload } from "../mappers";
 import { requireAdminKey } from "../middleware/admin";
+import { createThumbnail } from "../uploads/thumbnail";
 
 export const uploadsRoute = new Hono();
 
@@ -23,12 +24,14 @@ uploadsRoute.post("/", requireAdminKey, async (c) => {
   const safeName = `${crypto.randomUUID()}.${extension}`;
   const path = join(env.uploadDir, safeName);
   await Bun.write(path, file);
+  const thumbnail = await createThumbnail(file, env.uploadDir);
 
   const [upload] = await db
     .insert(uploads)
     .values({
       filename: file.name,
       url: `/uploads/${safeName}`,
+      thumbnailUrl: thumbnail?.url ?? "",
       contentType: file.type || "application/octet-stream",
       size: file.size
     })

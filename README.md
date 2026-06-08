@@ -138,6 +138,7 @@ packages/
   schema/    Shared Zod schemas and inferred TypeScript types
 scripts/
   dev.ts     Bun full stack dev runner
+docs/        Project documentation for developers, deployment, database setup, and branding
 ```
 
 This template intentionally uses separate Bun install contexts at the root, `apps/web`, `apps/server`, and `packages/schema`.
@@ -252,6 +253,11 @@ bun run db:studio
 - `POST /api/uploads` with multipart `file` and `X-Admin-Key`
 - `GET /uploads/*`
 
+Image uploads also generate compressed WebP thumbnails. The upload response includes both:
+
+- `url`: original uploaded asset
+- `thumbnailUrl`: optimized 640px thumbnail for supported image files, or an empty string for non-image files
+
 ## Shared Schema
 
 `packages/schema` exports:
@@ -259,7 +265,18 @@ bun run db:studio
 - `SiteSchema`
 - `SiteDraftSchema`
 - `SiteListSchema`
+- `SiteMetadataSchema`
+- `SiteBrandingSchema`
 - `UploadSchema`
 - `ApiErrorSchema`
 - Inferred TypeScript types for the API, dashboard, and import or validation scripts
+
+## More Documentation
+
+See [docs/README.md](./docs/README.md) for:
+
+- Developer onboarding
+- Deployment and hosting
+- External PostgreSQL setup
+- Branding and marketing guidance
 # fullstack-template-v1

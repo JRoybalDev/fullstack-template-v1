@@ -8,6 +8,7 @@ import { PublicSite } from "./routes/PublicSite";
 import "./styles/branding.css";
 import "./styles/index.css";
 import "./styles/public.css";
+import "./styles/dashboard-branding.css";
 import "./styles/dashboard.css";
 
 const queryClient = new QueryClient();

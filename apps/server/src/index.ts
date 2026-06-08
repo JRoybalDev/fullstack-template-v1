@@ -24,6 +24,20 @@ app.get("/health", (c) =>
   })
 );
 
+app.get("/", (c) =>
+  c.json({
+    ok: true,
+    service: "fullstack-template-api",
+    routes: {
+      health: "/health",
+      publicSites: "/api/sites",
+      adminSession: "/api/admin/session",
+      adminSites: "/api/admin/sites",
+      uploads: "/api/uploads"
+    }
+  })
+);
+
 app.route("/api/sites", sitesRoute);
 app.route("/api/admin", adminRoute);
 app.route("/api/uploads", uploadsRoute);

@@ -1,8 +1,9 @@
 export async function apiJson(path: string, init?: RequestInit) {
+  const isFormData = init?.body instanceof FormData;
   const response = await fetch(path, {
     ...init,
     headers: {
-      "Content-Type": "application/json",
+      ...(isFormData ? {} : { "Content-Type": "application/json" }),
       ...init?.headers
     }
   });

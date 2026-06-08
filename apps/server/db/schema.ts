@@ -1,4 +1,5 @@
 import { boolean, integer, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { defaultSiteBranding, defaultSiteMetadata } from "@fullstack-template/schema";
 
 export const sites = pgTable("sites", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -6,6 +7,14 @@ export const sites = pgTable("sites", {
   title: text("title").notNull(),
   description: text("description").notNull().default(""),
   heroImageUrl: text("hero_image_url").notNull().default(""),
+  metadata: jsonb("metadata")
+    .$type<{ tabTitle: string; seoTitle: string; seoDescription: string; faviconUrl: string; ogImageUrl: string }>()
+    .notNull()
+    .default(defaultSiteMetadata),
+  branding: jsonb("branding")
+    .$type<{ backgroundColor: string; surfaceColor: string; textColor: string; headingColor: string; accentColor: string }>()
+    .notNull()
+    .default(defaultSiteBranding),
   links: jsonb("links").$type<Array<{ label: string; href: string; kind: "primary" | "secondary" | "social" }>>().notNull().default([]),
   published: boolean("published").notNull().default(false),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
@@ -15,6 +24,7 @@ export const uploads = pgTable("uploads", {
   id: uuid("id").primaryKey().defaultRandom(),
   filename: text("filename").notNull(),
   url: text("url").notNull(),
+  thumbnailUrl: text("thumbnail_url").notNull().default(""),
   contentType: text("content_type").notNull(),
   size: integer("size").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
