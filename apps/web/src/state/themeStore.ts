@@ -4,6 +4,7 @@ export type ThemeMode = "system" | "light" | "dark";
 type ResolvedTheme = "light" | "dark";
 
 const storageKey = "fullstack-template-theme";
+const themeChangeEvent = "fullstack-template-theme-change";
 
 export function useThemeMode() {
   const [mode, setModeState] = useState<ThemeMode>(() => {
@@ -28,6 +29,20 @@ export function useThemeMode() {
   }, []);
 
   useEffect(() => {
+    const updateSavedTheme = () => {
+      const saved = window.localStorage.getItem(storageKey);
+      setModeState(isThemeMode(saved) ? saved : "system");
+    };
+
+    window.addEventListener("storage", updateSavedTheme);
+    window.addEventListener(themeChangeEvent, updateSavedTheme);
+    return () => {
+      window.removeEventListener("storage", updateSavedTheme);
+      window.removeEventListener(themeChangeEvent, updateSavedTheme);
+    };
+  }, []);
+
+  useEffect(() => {
     document.documentElement.dataset.theme = resolvedTheme;
     document.documentElement.style.colorScheme = resolvedTheme;
   }, [resolvedTheme]);
@@ -35,6 +50,7 @@ export function useThemeMode() {
   const setMode = useMemo(
     () => (nextMode: ThemeMode) => {
       window.localStorage.setItem(storageKey, nextMode);
+      window.dispatchEvent(new Event(themeChangeEvent));
       setModeState(nextMode);
     },
     []

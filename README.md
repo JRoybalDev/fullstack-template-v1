@@ -1,6 +1,6 @@
 # Fullstack Template V1
 
-Bun-first TypeScript template with a React 19 + Vite frontend, Bun + Hono API, Postgres 16 persistence through Drizzle ORM, protected admin writes, local or Cloudinary uploads, Resend-ready auth emails, structured API responses, request IDs, and a shared Zod schema package.
+Bun-first TypeScript template with a React 19 + Vite frontend, Bun + Hono API, Postgres 16 persistence through Drizzle ORM, protected admin writes, local or Cloudinary uploads, Resend-ready auth emails, structured API responses, request IDs, a shared Zod schema package, and a responsive public page grid with client-editable light/dark branding colors.
 
 ## Start A New Project
 
@@ -166,6 +166,16 @@ This template intentionally uses separate Bun install contexts at the root, `app
 
 Public page content is intentionally added statically in React routes/components. Use the dashboard for project setup, metadata, branding colors, links, users, records, and upload management.
 
+The public site uses a shared responsive grid template for new frontend pages:
+
+```txt
+header header header
+aside  main   aside
+footer footer footer
+```
+
+The shared header/navbar is rendered by `apps/web/src/routes/App.tsx`. Page routes render the left aside, main section, right aside, and footer with the `frontend-template-grid` and `template-section` classes. See [Page Setup With The Grid Layout](./docs/page-setup-grid-layout.md) for the copyable page recipe.
+
 ## Stack
 
 - Runtime: Bun
@@ -173,7 +183,7 @@ Public page content is intentionally added statically in React routes/components
 - Database: Postgres 16, exposed locally on host port `5433` by default
 - ORM and migrations: Drizzle ORM + Drizzle Kit
 - Frontend: React 19, Vite 8, React Router 7, TanStack Query 5, Zustand 5
-- Styling: Tailwind CSS 4, DaisyUI 5, regular CSS files
+- Styling: Tailwind CSS 4, DaisyUI 5, regular CSS files, responsive grid-template layout primitives
 - API: Hono on port `3001`
 - Web: Vite on port `5173`
 - Dashboard: `http://localhost:5173/dashboard`
@@ -191,6 +201,8 @@ apps/web/public/favicon.svg
 ```
 
 Page titles use `Site Name | Page Name`; the dashboard uses `Site Name | Dashboard`.
+
+Public page records can override the semantic app color variables from the dashboard Branding tab. The tab has separate light and dark sections for the shared variables used by the public page and header, including background, surfaces, borders, text, navigation, accent, danger, and topbar colors.
 
 ## First Run In This Template
 
@@ -398,4 +410,4 @@ See [docs/README.md](./docs/README.md) for:
 - External PostgreSQL setup
 - Auth presets
 - Branding and marketing guidance
-# fullstack-template-v1
+- Page setup with the responsive grid layout

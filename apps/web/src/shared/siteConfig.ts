@@ -2,7 +2,8 @@ export const siteConfig = {
   siteName: "Fullstack Template",
   defaultPageName: "Home",
   dashboardPageName: "Dashboard",
-  faviconHref: "/favicon.svg"
+  faviconHref: "/favicon.svg",
+  frontendAsideMode: "static" as "scroll" | "static"
 };
 
 export function formatPageTitle(pageName = siteConfig.defaultPageName) {

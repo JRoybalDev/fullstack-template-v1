@@ -1,5 +1,5 @@
 import { boolean, integer, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
-import { defaultSiteBranding, defaultSiteMetadata } from "@fullstack-template/schema";
+import { defaultSiteBranding, defaultSiteMetadata, type SiteBranding } from "@fullstack-template/schema";
 
 export const sites = pgTable("sites", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -12,7 +12,7 @@ export const sites = pgTable("sites", {
     .notNull()
     .default(defaultSiteMetadata),
   branding: jsonb("branding")
-    .$type<{ backgroundColor: string; surfaceColor: string; textColor: string; headingColor: string; accentColor: string }>()
+    .$type<SiteBranding>()
     .notNull()
     .default(defaultSiteBranding),
   links: jsonb("links").$type<Array<{ label: string; href: string; kind: "primary" | "secondary" | "social" }>>().notNull().default([]),

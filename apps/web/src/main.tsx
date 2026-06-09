@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { App } from "./routes/App";
 import { Dashboard } from "./routes/Dashboard";
+import { NotFound } from "./routes/NotFound";
 import { PublicSite } from "./routes/PublicSite";
 import { ResetPassword } from "./routes/ResetPassword";
 import "./styles/branding.css";
@@ -21,7 +22,8 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <PublicSite /> },
       { path: "dashboard", element: <Dashboard /> },
-      { path: "reset-password", element: <ResetPassword /> }
+      { path: "reset-password", element: <ResetPassword /> },
+      { path: "*", element: <NotFound /> }
     ]
   }
 ]);

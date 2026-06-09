@@ -10,3 +10,4 @@ Use this directory for project-facing documentation that should live alongside t
 - [Auth Presets](./auth-presets.md): choosing between `ADMIN_KEY` and Better Auth for protected dashboard/API access.
 - [Integrations And API Standards](./integrations-and-api.md): Resend, Cloudinary, API envelopes, request IDs, logs, and seed commands.
 - [Branding And Marketing](./branding-and-marketing.md): guide for static content ownership, site identity, colors, themes, public pages, uploads, and dashboard usage.
+- [Page Setup With The Grid Layout](./page-setup-grid-layout.md): helper for creating new frontend pages with the shared header, asides, main area, footer, animations, and theme variables.

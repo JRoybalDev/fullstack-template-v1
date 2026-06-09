@@ -24,6 +24,12 @@ apps/web/src/routes
 
 The dashboard is still useful for supporting site data such as metadata, colors, links, users, records, and uploaded media.
 
+Public pages use a shared template layout with a full-width header/navbar, left aside, main section, right aside, and footer. Developers can use the setup guide here:
+
+```txt
+docs/page-setup-grid-layout.md
+```
+
 ## Site Name, Page Titles, And Favicon
 
 The site name, page-title format, dashboard title, and shared favicon are configured in code:
@@ -67,7 +73,7 @@ Brand colors live in:
 apps/web/src/styles/branding.css
 ```
 
-That file contains the global light and dark theme color tokens for the public site and shared app shell. Other CSS files reference those tokens instead of hard-coding colors.
+That file contains the global fallback light and dark theme color tokens for the public site and shared app shell. Other CSS files reference those tokens instead of hard-coding colors.
 
 Dashboard-specific branding lives in:
 
@@ -90,21 +96,46 @@ Examples:
 --app-heading
 --app-accent
 --app-surface
+--app-border
+--app-topbar
 ```
 
-When changing public site colors, update `branding.css` first. When changing only the private dashboard colors, update `dashboard-branding.css`.
+When changing template-wide fallback colors, update `branding.css`. When changing only the private dashboard colors, update `dashboard-branding.css`.
 
 ## Dashboard Branding Tab
 
-The dashboard includes a Branding tab for client-editable public site colors. These colors are saved with the site record and can be changed without editing code:
+The dashboard includes a Branding tab for client-editable public site colors. These colors are saved with the site record and can be changed without editing code.
 
-- Background
+The tab is split into:
+
+- Light theme
+- Dark theme
+
+Each section maps to the public page's semantic app variables:
+
+- Page background
 - Surface
+- Muted surface
+- Accent surface
+- Danger surface
+- Border
+- Strong border
+- Accent border
+- Danger border
 - Body text
 - Headings
+- Muted text
+- Nav text
+- Active nav
+- Header background
 - Accent
+- Strong accent
+- Accent text
+- Danger text
 
-These saved colors affect the public site record after saving. They do not change browser titles, the shared favicon, or the private dashboard's company-branded palette.
+These saved colors affect the public site record after saving. They also update the shared public header/navbar because the public page writes the saved colors into the root `--app-*` variables while it is mounted.
+
+These saved colors do not change browser titles, the shared favicon, or the private dashboard's company-branded palette.
 
 ## Dashboard Metadata Tab
 
@@ -125,6 +156,8 @@ The app supports:
 - System auto-detection
 
 The selector is in the top navigation. System mode follows the visitor's operating system preference.
+
+When dark mode is active, the public page uses the saved dark Branding tab colors. When light mode is active, it uses the saved light colors.
 
 ## Writing Guidelines
 
@@ -154,3 +187,5 @@ Check:
 - Thumbnail images look clear.
 - Replaced or deleted uploads are no longer used by live content.
 - Light and dark themes both look readable.
+- Header, asides, main content, and footer line up correctly on desktop.
+- Static asides stop before the footer when the page is scrolled to the bottom.

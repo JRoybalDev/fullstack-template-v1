@@ -94,7 +94,21 @@ The shared schema package is the contract between the web app and server. Add or
 
 Public page content is static by default and should be edited in React routes/components. The dashboard intentionally does not include a Content tab; it focuses on setup, metadata, branding colors, links, users, records, and upload management.
 
+Non-dashboard routes are wrapped by `apps/web/src/routes/App.tsx` with the shared public header/navbar, route transition animation, and `site-template-shell` grid. New public pages should use the `frontend-template-grid` body layout:
+
+```txt
+header header header
+aside  main   aside
+footer footer footer
+```
+
+The header is supplied by the app shell. Route components should render the left aside, main section, right aside, and footer using `template-section`, `template-aside`, `grid-area-aside-left`, `grid-area-main`, `grid-area-aside-right`, and `public-layout-footer`. See [Page Setup With The Grid Layout](./page-setup-grid-layout.md) for the copyable route template.
+
+Aside behavior is configured in `apps/web/src/shared/siteConfig.ts` with `frontendAsideMode`. Use `"static"` for sticky viewport-height asides that release before the footer, or `"scroll"` for asides that stretch and scroll with the page.
+
 Site identity is code-configured in `apps/web/src/shared/siteConfig.ts`. Change the site name, default page name, dashboard page name, page-title format, and favicon path there. The default convention is `Site Name | Page Name`, with the dashboard using `Site Name | Dashboard`.
+
+The app includes a shared loading component in `apps/web/src/shared/Loading.tsx` and a catch-all not found page in `apps/web/src/routes/NotFound.tsx`. Use `LoadingScreen` for public or dashboard states that are waiting on async data.
 
 Protected dashboard and write requests use the auth preset configured by `AUTH_MODE`. Keep `AUTH_MODE=admin-key` for simple projects that only need an access code, or switch to `AUTH_MODE=better-auth` for email/password accounts backed by Better Auth sessions and admin roles. The template default keeps Better Auth signup private; admins create users from the dashboard Users tab. See [Auth Presets](./auth-presets.md).
 
@@ -123,3 +137,5 @@ Every request receives an `X-Request-Id` response header and a structured JSON l
 OpenAPI docs are served from `/docs`, and the source spec lives in `apps/server/src/openapi.ts`. Update that file whenever you add or rename API routes.
 
 Security headers are applied in `apps/server/src/middleware/securityHeaders.ts`. If you add analytics, embedded frames, or third-party asset hosts, update the CSP there and keep the change deliberate.
+
+Public page theme colors are stored with the site record through `SiteBrandingSchema`. The dashboard Branding tab exposes light and dark values for the semantic `--app-*` variables used by public pages and the shared header. When adding CSS, prefer variables such as `--app-bg`, `--app-surface`, `--app-text`, `--app-heading`, `--app-border`, `--app-accent`, and `--app-topbar` so the page remains editable from the dashboard.

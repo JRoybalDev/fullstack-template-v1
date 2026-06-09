@@ -1,4 +1,4 @@
-import { SiteDraftSchema, type Site, type SiteDraft, type SiteDraftInput, type Upload } from "@fullstack-template/schema";
+import { SiteDraftSchema, type Site, type SiteBranding, type SiteDraft, type SiteDraftInput, type Upload } from "@fullstack-template/schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion, type Transition } from "framer-motion";
@@ -44,6 +44,44 @@ const defaultDraft: SiteDraftInput = {
   },
   branding: {
     backgroundColor: "#f7f7f2",
+    lightBackgroundColor: "#f7f7f2",
+    darkBackgroundColor: "#111418",
+    lightSurfaceColor: "#ffffff",
+    darkSurfaceColor: "#191f27",
+    lightSurfaceMutedColor: "#f8fafc",
+    darkSurfaceMutedColor: "#202833",
+    lightSurfaceAccentColor: "#eef6f7",
+    darkSurfaceAccentColor: "#16333a",
+    lightBorderColor: "#deded2",
+    darkBorderColor: "#2c3440",
+    lightBorderStrongColor: "#c9c9bd",
+    darkBorderStrongColor: "#435061",
+    lightBorderAccentColor: "#c7dde0",
+    darkBorderAccentColor: "#2b6871",
+    lightSurfaceDangerColor: "#fff1f1",
+    darkSurfaceDangerColor: "#3a2020",
+    lightBorderDangerColor: "#f1c5c5",
+    darkBorderDangerColor: "#6f3535",
+    lightTextColor: "#18212f",
+    darkTextColor: "#e8edf3",
+    lightHeadingColor: "#101828",
+    darkHeadingColor: "#f7fafc",
+    lightMutedColor: "#536173",
+    darkMutedColor: "#aab6c5",
+    lightNavColor: "#445064",
+    darkNavColor: "#c6d0dd",
+    lightAccentColor: "#006d77",
+    darkAccentColor: "#55c8d6",
+    lightAccentStrongColor: "#005f69",
+    darkAccentStrongColor: "#9de4ec",
+    lightAccentTextColor: "#193926",
+    darkAccentTextColor: "#d6fbef",
+    lightDangerColor: "#b42318",
+    darkDangerColor: "#ff9b8f",
+    lightNavActiveColor: "#e7f0e8",
+    darkNavActiveColor: "#18382f",
+    lightTopbarColor: "#f7f7f2",
+    darkTopbarColor: "#111418",
     surfaceColor: "#ffffff",
     textColor: "#18212f",
     headingColor: "#101828",
@@ -658,13 +696,49 @@ function MetadataPanel({ form }: { form: ReturnType<typeof useForm<SiteDraftInpu
 }
 
 function BrandingPanel({ form }: { form: ReturnType<typeof useForm<SiteDraftInput, unknown, SiteDraft>> }) {
-  const fields = [
-    ["backgroundColor", "Background"],
-    ["surfaceColor", "Surface"],
-    ["textColor", "Body text"],
-    ["headingColor", "Headings"],
-    ["accentColor", "Accent"]
-  ] as const;
+  type BrandingField = keyof SiteBranding;
+  const lightFields: Array<[BrandingField, string]> = [
+    ["lightBackgroundColor", "Page background"],
+    ["lightSurfaceColor", "Surface"],
+    ["lightSurfaceMutedColor", "Muted surface"],
+    ["lightSurfaceAccentColor", "Accent surface"],
+    ["lightBorderColor", "Border"],
+    ["lightBorderStrongColor", "Strong border"],
+    ["lightBorderAccentColor", "Accent border"],
+    ["lightSurfaceDangerColor", "Danger surface"],
+    ["lightBorderDangerColor", "Danger border"],
+    ["lightTextColor", "Body text"],
+    ["lightHeadingColor", "Headings"],
+    ["lightMutedColor", "Muted text"],
+    ["lightNavColor", "Nav text"],
+    ["lightNavActiveColor", "Active nav"],
+    ["lightTopbarColor", "Header background"],
+    ["lightAccentColor", "Accent"],
+    ["lightAccentStrongColor", "Strong accent"],
+    ["lightAccentTextColor", "Accent text"],
+    ["lightDangerColor", "Danger text"]
+  ];
+  const darkFields: Array<[BrandingField, string]> = [
+    ["darkBackgroundColor", "Page background"],
+    ["darkSurfaceColor", "Surface"],
+    ["darkSurfaceMutedColor", "Muted surface"],
+    ["darkSurfaceAccentColor", "Accent surface"],
+    ["darkBorderColor", "Border"],
+    ["darkBorderStrongColor", "Strong border"],
+    ["darkBorderAccentColor", "Accent border"],
+    ["darkSurfaceDangerColor", "Danger surface"],
+    ["darkBorderDangerColor", "Danger border"],
+    ["darkTextColor", "Body text"],
+    ["darkHeadingColor", "Headings"],
+    ["darkMutedColor", "Muted text"],
+    ["darkNavColor", "Nav text"],
+    ["darkNavActiveColor", "Active nav"],
+    ["darkTopbarColor", "Header background"],
+    ["darkAccentColor", "Accent"],
+    ["darkAccentStrongColor", "Strong accent"],
+    ["darkAccentTextColor", "Accent text"],
+    ["darkDangerColor", "Danger text"]
+  ];
 
   return (
     <div className="dashboard-form">
@@ -672,6 +746,30 @@ function BrandingPanel({ form }: { form: ReturnType<typeof useForm<SiteDraftInpu
         <p className="dashboard-eyebrow">Public site theme</p>
         <h3>Branding</h3>
       </div>
+      <div className="theme-color-sections">
+        <ThemeColorSection fields={lightFields} form={form} title="Light theme" />
+        <ThemeColorSection fields={darkFields} form={form} title="Dark theme" />
+      </div>
+      <p className="dashboard-note">
+        These colors map to public page CSS variables. Browser titles and the favicon are managed in `apps/web/src/shared/siteConfig.ts`.
+      </p>
+      <FormErrors errors={form.formState.errors} />
+    </div>
+  );
+}
+
+function ThemeColorSection({
+  fields,
+  form,
+  title
+}: {
+  fields: Array<[keyof SiteBranding, string]>;
+  form: ReturnType<typeof useForm<SiteDraftInput, unknown, SiteDraft>>;
+  title: string;
+}) {
+  return (
+    <section className="theme-color-section">
+      <h4>{title}</h4>
       <div className="color-grid">
         {fields.map(([field, label]) => (
           <label className="color-field" key={field}>
@@ -683,11 +781,7 @@ function BrandingPanel({ form }: { form: ReturnType<typeof useForm<SiteDraftInpu
           </label>
         ))}
       </div>
-      <p className="dashboard-note">
-        These colors apply to public site records after saving. Browser titles and the favicon are managed in `apps/web/src/shared/siteConfig.ts`.
-      </p>
-      <FormErrors errors={form.formState.errors} />
-    </div>
+    </section>
   );
 }
 
