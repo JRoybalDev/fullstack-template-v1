@@ -18,6 +18,7 @@
   --brand-teal-700: #006d77;
   --brand-teal-800: #005f69;
   --brand-green-900: #193926;
+  --brand-indigo-600: #635bff;
   --brand-red-50: #fff1f1;
   --brand-red-200: #f1c5c5;
   --brand-red-700: #b42318;
@@ -38,6 +39,11 @@
   --app-accent: var(--brand-teal-700);
   --app-accent-strong: var(--brand-teal-800);
   --app-accent-text: var(--brand-green-900);
+  --app-button-primary: var(--brand-indigo-600);
+  --app-button-primary-text: var(--brand-white);
+  --app-button-secondary: var(--app-surface-accent);
+  --app-button-secondary-border: var(--app-border-accent);
+  --app-button-secondary-text: var(--app-accent-strong);
   --app-nav-active: var(--brand-paper-300);
   --app-danger: var(--brand-red-700);
   --app-topbar: rgba(247, 247, 242, 0.92);
@@ -60,6 +66,7 @@
   --brand-teal-700: #55c8d6;
   --brand-teal-800: #9de4ec;
   --brand-green-900: #d6fbef;
+  --brand-indigo-600: #7c73ff;
   --brand-red-50: #3a2020;
   --brand-red-200: #6f3535;
   --brand-red-700: #ff9b8f;

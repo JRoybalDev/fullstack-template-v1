@@ -147,8 +147,19 @@ select {
   margin: var(--template-header-offset) var(--template-page-padding) 0;
   padding: 16px clamp(18px, 4vw, 48px);
   position: sticky;
-  top: var(--template-header-offset);
+  top: 0;
+  transition:
+    border-color 180ms ease,
+    background-color 220ms ease;
   z-index: 10;
+}
+
+.topbar::before {
+  background: var(--public-template-bg, var(--app-bg));
+  content: "";
+  inset: calc(var(--template-header-offset) * -1) calc(var(--template-page-padding) * -1) 100%;
+  position: absolute;
+  z-index: -1;
 }
 
 .brand {
@@ -219,9 +230,24 @@ select {
 .btn {
   align-items: center;
   border-radius: 8px;
+  font-weight: 800;
   display: inline-flex;
   gap: 8px;
   min-height: 42px;
+  padding: 0 16px;
+}
+
+.btn-primary {
+  background: var(--app-button-primary, var(--app-accent));
+  border: 1px solid var(--app-button-primary, var(--app-accent));
+  color: var(--app-button-primary-text, var(--app-accent-text));
+}
+
+.btn-secondary,
+.btn-ghost {
+  background: var(--app-button-secondary, transparent);
+  border: 1px solid var(--app-button-secondary-border, var(--app-border-accent));
+  color: var(--app-button-secondary-text, var(--app-accent-strong));
 }
 
 .loading-screen {

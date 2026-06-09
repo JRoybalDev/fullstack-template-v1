@@ -180,6 +180,11 @@ Common variables:
 - `--app-border-strong`
 - `--app-border-accent`
 - `--app-border-danger`
+- `--app-button-primary`
+- `--app-button-primary-text`
+- `--app-button-secondary`
+- `--app-button-secondary-border`
+- `--app-button-secondary-text`
 - `--app-text`
 - `--app-heading`
 - `--app-muted`

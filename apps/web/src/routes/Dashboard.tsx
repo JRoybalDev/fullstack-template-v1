@@ -2,12 +2,13 @@ import { SiteDraftSchema, type Site, type SiteBranding, type SiteDraft, type Sit
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion, type Transition } from "framer-motion";
-import { FormEvent, useEffect, useMemo, useState } from "react";
-import { useFieldArray, useForm } from "react-hook-form";
+import { type CSSProperties, FormEvent, useEffect, useMemo, useState } from "react";
+import { type FieldPath, useFieldArray, useForm } from "react-hook-form";
 import {
   FiChevronDown,
   FiExternalLink,
   FiFileText,
+  FiGrid,
   FiHelpCircle,
   FiImage,
   FiLink,
@@ -40,7 +41,8 @@ const defaultDraft: SiteDraftInput = {
   metadata: {
     seoTitle: "",
     seoDescription: "",
-    ogImageUrl: ""
+    ogImageUrl: "",
+    frontendAsideMode: "static"
   },
   branding: {
     backgroundColor: "#f7f7f2",
@@ -76,6 +78,16 @@ const defaultDraft: SiteDraftInput = {
     darkAccentStrongColor: "#9de4ec",
     lightAccentTextColor: "#193926",
     darkAccentTextColor: "#d6fbef",
+    lightButtonPrimaryColor: "#635bff",
+    darkButtonPrimaryColor: "#7c73ff",
+    lightButtonPrimaryTextColor: "#ffffff",
+    darkButtonPrimaryTextColor: "#ffffff",
+    lightButtonSecondaryColor: "#eef6f7",
+    darkButtonSecondaryColor: "#202833",
+    lightButtonSecondaryTextColor: "#005f69",
+    darkButtonSecondaryTextColor: "#9de4ec",
+    lightButtonSecondaryBorderColor: "#c7dde0",
+    darkButtonSecondaryBorderColor: "#435061",
     lightDangerColor: "#b42318",
     darkDangerColor: "#ff9b8f",
     lightNavActiveColor: "#e7f0e8",
@@ -91,7 +103,7 @@ const defaultDraft: SiteDraftInput = {
   published: true
 };
 
-type DashboardTabId = "start" | "overview" | "metadata" | "branding" | "links" | "users" | "records" | "uploads" | "help";
+type DashboardTabId = "start" | "overview" | "layout" | "metadata" | "branding" | "links" | "users" | "records" | "uploads" | "help";
 type DashboardGroupId = "site" | "library" | "support";
 
 type DashboardTab = {
@@ -113,6 +125,7 @@ const dashboardGroups: DashboardGroup[] = [
     tabs: [
       { id: "start", label: "Start Guide", icon: FiHelpCircle },
       { id: "overview", label: "Overview", icon: FiSettings },
+      { id: "layout", label: "Layout", icon: FiGrid },
       { id: "metadata", label: "Metadata", icon: FiSliders },
       { id: "branding", label: "Branding", icon: FiImage },
       { id: "links", label: "Links", icon: FiLink },
@@ -143,6 +156,22 @@ const themeOptions: Array<{ mode: ThemeMode; label: string; icon: typeof FiSun }
   { mode: "dark", label: "Dark theme", icon: FiMoon },
   { mode: "system", label: "Use system theme", icon: FiMonitor }
 ];
+
+function normalizeDraft(draft?: SiteDraftInput | null): SiteDraftInput {
+  return {
+    ...defaultDraft,
+    ...draft,
+    metadata: {
+      ...defaultDraft.metadata,
+      ...draft?.metadata
+    },
+    branding: {
+      ...defaultDraft.branding,
+      ...draft?.branding
+    },
+    links: draft?.links ?? defaultDraft.links
+  };
+}
 
 export function Dashboard() {
   const queryClient = useQueryClient();
@@ -180,7 +209,7 @@ export function Dashboard() {
 
   const form = useForm<SiteDraftInput, unknown, SiteDraft>({
     resolver: zodResolver(SiteDraftSchema),
-    defaultValues: cachedDraft ?? defaultDraft
+    defaultValues: normalizeDraft(cachedDraft)
   });
 
   const links = useFieldArray({
@@ -221,6 +250,12 @@ export function Dashboard() {
     });
     return () => subscription.unsubscribe();
   }, [form, setDraft]);
+
+  useEffect(() => {
+    if (!form.getValues("metadata.frontendAsideMode")) {
+      form.setValue("metadata.frontendAsideMode", "static", { shouldDirty: false });
+    }
+  }, [form]);
 
   const sites = useQuery({
     queryKey: ["admin-sites"],
@@ -345,12 +380,12 @@ export function Dashboard() {
   }
 
   function resetToDefaults() {
-    form.reset(defaultDraft);
+    form.reset(normalizeDraft());
     setSaveMessage("");
   }
 
   function loadSite(site: Site) {
-    form.reset({
+    form.reset(normalizeDraft({
       slug: site.slug,
       title: site.title,
       description: site.description,
@@ -359,7 +394,7 @@ export function Dashboard() {
       branding: site.branding,
       links: site.links,
       published: site.published
-    });
+    }));
     setActiveTabId("overview");
     setSaveMessage("");
   }
@@ -536,6 +571,7 @@ export function Dashboard() {
         <div className="dashboard-workspace__panel">
           {activeTab.id === "overview" ? <OverviewPanel selectedSite={selectedSite} saveMessage={saveMessage} saveError={saveSite.error?.message} /> : null}
           {activeTab.id === "start" ? <StartGuidePanel /> : null}
+          {activeTab.id === "layout" ? <LayoutPanel form={form} /> : null}
           {activeTab.id === "metadata" ? <MetadataPanel form={form} /> : null}
           {activeTab.id === "branding" ? <BrandingPanel form={form} /> : null}
           {activeTab.id === "links" ? <LinksPanel form={form} links={links} /> : null}
@@ -661,12 +697,60 @@ function StartGuidePanel() {
           <strong>Set project identity:</strong> Edit `apps/web/src/shared/siteConfig.ts` for the site name, dashboard title, page-title format, and favicon.
         </li>
         <li>
-          <strong>Build static pages:</strong> Add the real public content in React routes/components, then use Metadata, Branding, Links, and Uploads for supporting records and assets.
+          <strong>Build static pages:</strong> Add the real public content in React routes/components. Use `docs/page-setup-grid-layout.md` for the shared header, aside, main, and footer template.
+        </li>
+        <li>
+          <strong>Choose layout behavior:</strong> Use the Layout tab to switch asides between sticky viewport-height panels and page-scrolling panels.
         </li>
         <li>
           <strong>Verify the stack:</strong> Open `/docs` for API docs, run `bun run typecheck`, and run `bun run build` before handing off.
         </li>
       </ol>
+    </div>
+  );
+}
+
+function LayoutPanel({ form }: { form: ReturnType<typeof useForm<SiteDraftInput, unknown, SiteDraft>> }) {
+  const asideMode = form.watch("metadata.frontendAsideMode") ?? "static";
+
+  return (
+    <div className="dashboard-form">
+      <div>
+        <p className="dashboard-eyebrow">Frontend layout</p>
+        <h3>Page grid settings</h3>
+      </div>
+      <div className="layout-settings-grid">
+        <div className="layout-mode-options" role="radiogroup" aria-label="Aside behavior">
+          <label className={asideMode === "static" ? "layout-mode-card layout-mode-card--active" : "layout-mode-card"}>
+            <input {...form.register("metadata.frontendAsideMode")} type="radio" value="static" />
+            <span>Static asides</span>
+            <small>Asides stick to the current viewport while the main page scrolls, then release before the footer.</small>
+          </label>
+          <label className={asideMode === "scroll" ? "layout-mode-card layout-mode-card--active" : "layout-mode-card"}>
+            <input {...form.register("metadata.frontendAsideMode")} type="radio" value="scroll" />
+            <span>Scrollable asides</span>
+            <small>Asides stretch with the page and scroll naturally with the main content.</small>
+          </label>
+        </div>
+        <LayoutPreview asideMode={asideMode} />
+      </div>
+      <p className="dashboard-note">
+        This setting is saved with the site record. The shared header/navbar still comes from `App.tsx`; public page routes render the left aside, main area, right aside, and footer.
+      </p>
+      <FormErrors errors={form.formState.errors} />
+    </div>
+  );
+}
+
+function LayoutPreview({ asideMode }: { asideMode: "scroll" | "static" }) {
+  return (
+    <div className={`layout-preview layout-preview--${asideMode}`} aria-label="Frontend grid preview">
+      <div className="layout-preview__cell layout-preview__header">Header / Navbar</div>
+      <div className="layout-preview__cell layout-preview__aside">Left Aside</div>
+      <div className="layout-preview__cell layout-preview__main">Main</div>
+      <div className="layout-preview__cell layout-preview__aside">Right Aside</div>
+      <div className="layout-preview__cell layout-preview__footer">Footer</div>
+      <span>{asideMode === "static" ? "Sticky asides" : "Page-scrolling asides"}</span>
     </div>
   );
 }
@@ -696,6 +780,8 @@ function MetadataPanel({ form }: { form: ReturnType<typeof useForm<SiteDraftInpu
 }
 
 function BrandingPanel({ form }: { form: ReturnType<typeof useForm<SiteDraftInput, unknown, SiteDraft>> }) {
+  const branding = { ...defaultDraft.branding, ...form.watch("branding") } as SiteBranding;
+  const contrastWarnings = [...getContrastWarnings(branding, "light"), ...getContrastWarnings(branding, "dark")];
   type BrandingField = keyof SiteBranding;
   const lightFields: Array<[BrandingField, string]> = [
     ["lightBackgroundColor", "Page background"],
@@ -716,6 +802,11 @@ function BrandingPanel({ form }: { form: ReturnType<typeof useForm<SiteDraftInpu
     ["lightAccentColor", "Accent"],
     ["lightAccentStrongColor", "Strong accent"],
     ["lightAccentTextColor", "Accent text"],
+    ["lightButtonPrimaryColor", "Primary button"],
+    ["lightButtonPrimaryTextColor", "Primary button text"],
+    ["lightButtonSecondaryColor", "Secondary button"],
+    ["lightButtonSecondaryTextColor", "Secondary button text"],
+    ["lightButtonSecondaryBorderColor", "Secondary button border"],
     ["lightDangerColor", "Danger text"]
   ];
   const darkFields: Array<[BrandingField, string]> = [
@@ -737,6 +828,11 @@ function BrandingPanel({ form }: { form: ReturnType<typeof useForm<SiteDraftInpu
     ["darkAccentColor", "Accent"],
     ["darkAccentStrongColor", "Strong accent"],
     ["darkAccentTextColor", "Accent text"],
+    ["darkButtonPrimaryColor", "Primary button"],
+    ["darkButtonPrimaryTextColor", "Primary button text"],
+    ["darkButtonSecondaryColor", "Secondary button"],
+    ["darkButtonSecondaryTextColor", "Secondary button text"],
+    ["darkButtonSecondaryBorderColor", "Secondary button border"],
     ["darkDangerColor", "Danger text"]
   ];
 
@@ -746,6 +842,22 @@ function BrandingPanel({ form }: { form: ReturnType<typeof useForm<SiteDraftInpu
         <p className="dashboard-eyebrow">Public site theme</p>
         <h3>Branding</h3>
       </div>
+      <BrandingPreview branding={branding} />
+      {contrastWarnings.length > 0 ? (
+        <div className="contrast-warning-list" role="status">
+          <strong>Contrast warnings</strong>
+          {contrastWarnings.map((warning) => (
+            <p key={`${warning.theme}-${warning.label}`}>
+              {warning.theme}: {warning.label} is {warning.ratio.toFixed(1)}:1. Aim for at least 4.5:1 for normal text.
+            </p>
+          ))}
+        </div>
+      ) : (
+        <div className="contrast-warning-list contrast-warning-list--clear" role="status">
+          <strong>Contrast check</strong>
+          <p>Core text and UI color pairs pass the 4.5:1 contrast target.</p>
+        </div>
+      )}
       <div className="theme-color-sections">
         <ThemeColorSection fields={lightFields} form={form} title="Light theme" />
         <ThemeColorSection fields={darkFields} form={form} title="Dark theme" />
@@ -772,17 +884,253 @@ function ThemeColorSection({
       <h4>{title}</h4>
       <div className="color-grid">
         {fields.map(([field, label]) => (
-          <label className="color-field" key={field}>
-            <span>{label}</span>
-            <div>
-              <input type="color" {...form.register(`branding.${field}`)} />
-              <input {...form.register(`branding.${field}`)} />
-            </div>
-          </label>
+          <ThemeColorField field={field} form={form} key={field} label={label} />
         ))}
       </div>
     </section>
   );
+}
+
+function ThemeColorField({
+  field,
+  form,
+  label
+}: {
+  field: keyof SiteBranding;
+  form: ReturnType<typeof useForm<SiteDraftInput, unknown, SiteDraft>>;
+  label: string;
+}) {
+  const path = `branding.${field}` as FieldPath<SiteDraftInput>;
+  const defaultBranding = defaultDraft.branding as SiteBranding;
+  const fallback = defaultBranding[field] || "#000000";
+  const watchedValue = form.watch(path);
+  const textValue = typeof watchedValue === "string" && watchedValue.length > 0 ? watchedValue : fallback;
+  const colorValue = isHexColor(textValue) ? textValue : fallback;
+
+  function updateColor(value: string) {
+    form.setValue(path, value, { shouldDirty: true, shouldTouch: true, shouldValidate: true });
+  }
+
+  return (
+    <label className="color-field">
+      <span>{label}</span>
+      <div>
+        <input aria-label={`${label} color picker`} type="color" value={colorValue} onChange={(event) => updateColor(event.target.value)} />
+        <input aria-label={`${label} hex value`} value={textValue} onChange={(event) => updateColor(event.target.value)} />
+      </div>
+    </label>
+  );
+}
+
+function isHexColor(value: string) {
+  return /^#[0-9a-fA-F]{6}$/.test(value);
+}
+
+type DashboardThemeColors = {
+  accent: string;
+  accentStrong: string;
+  accentText: string;
+  background: string;
+  border: string;
+  borderAccent: string;
+  borderDanger: string;
+  borderStrong: string;
+  buttonPrimary: string;
+  buttonPrimaryText: string;
+  buttonSecondary: string;
+  buttonSecondaryBorder: string;
+  buttonSecondaryText: string;
+  danger: string;
+  heading: string;
+  muted: string;
+  nav: string;
+  navActive: string;
+  surface: string;
+  surfaceAccent: string;
+  surfaceDanger: string;
+  surfaceMuted: string;
+  text: string;
+  topbar: string;
+};
+
+function BrandingPreview({ branding }: { branding: SiteBranding }) {
+  return (
+    <div className="branding-preview-grid">
+      <ThemePreviewCard branding={branding} theme="light" />
+      <ThemePreviewCard branding={branding} theme="dark" />
+    </div>
+  );
+}
+
+function ThemePreviewCard({ branding, theme }: { branding: SiteBranding; theme: "light" | "dark" }) {
+  const colors = getDashboardThemeColors(branding, theme);
+  const style = {
+    "--preview-accent": colors.accent,
+    "--preview-accent-strong": colors.accentStrong,
+    "--preview-accent-text": colors.accentText,
+    "--preview-bg": colors.background,
+    "--preview-border": colors.border,
+    "--preview-border-accent": colors.borderAccent,
+    "--preview-border-danger": colors.borderDanger,
+    "--preview-button-primary": colors.buttonPrimary,
+    "--preview-button-primary-text": colors.buttonPrimaryText,
+    "--preview-button-secondary": colors.buttonSecondary,
+    "--preview-button-secondary-border": colors.buttonSecondaryBorder,
+    "--preview-button-secondary-text": colors.buttonSecondaryText,
+    "--preview-danger": colors.danger,
+    "--preview-heading": colors.heading,
+    "--preview-muted": colors.muted,
+    "--preview-nav": colors.nav,
+    "--preview-nav-active": colors.navActive,
+    "--preview-surface": colors.surface,
+    "--preview-surface-accent": colors.surfaceAccent,
+    "--preview-surface-danger": colors.surfaceDanger,
+    "--preview-surface-muted": colors.surfaceMuted,
+    "--preview-text": colors.text,
+    "--preview-topbar": colors.topbar
+  } as CSSProperties;
+
+  return (
+    <article className="branding-preview-card" style={style}>
+      <div className="branding-preview-card__topbar">
+        <strong>{theme === "light" ? "Light" : "Dark"} preview</strong>
+        <span>Public</span>
+      </div>
+      <div className="branding-preview-card__layout">
+        <aside>
+          <span>Aside</span>
+          <small>Muted text</small>
+        </aside>
+        <main>
+          <span>Main</span>
+          <h4>Heading</h4>
+          <p>Body text and supporting copy.</p>
+          <button className="branding-preview-card__primary" type="button">Primary</button>
+          <button className="branding-preview-card__secondary" type="button">Secondary</button>
+          <em>Danger state</em>
+        </main>
+      </div>
+    </article>
+  );
+}
+
+function getDashboardThemeColors(branding: SiteBranding, theme: "light" | "dark"): DashboardThemeColors {
+  if (theme === "dark") {
+    return {
+      accent: branding.darkAccentColor || branding.accentColor,
+      accentStrong: branding.darkAccentStrongColor || branding.accentColor,
+      accentText: branding.darkAccentTextColor || "#d6fbef",
+      background: branding.darkBackgroundColor || branding.backgroundColor,
+      border: branding.darkBorderColor || "#2c3440",
+      borderAccent: branding.darkBorderAccentColor || "#2b6871",
+      borderDanger: branding.darkBorderDangerColor || "#6f3535",
+      borderStrong: branding.darkBorderStrongColor || "#435061",
+      buttonPrimary: branding.darkButtonPrimaryColor || branding.darkAccentColor || branding.accentColor,
+      buttonPrimaryText: branding.darkButtonPrimaryTextColor || "#ffffff",
+      buttonSecondary: branding.darkButtonSecondaryColor || branding.darkSurfaceMutedColor || branding.surfaceColor,
+      buttonSecondaryBorder: branding.darkButtonSecondaryBorderColor || branding.darkBorderStrongColor || "#435061",
+      buttonSecondaryText: branding.darkButtonSecondaryTextColor || branding.darkAccentStrongColor || branding.accentColor,
+      danger: branding.darkDangerColor || "#ff9b8f",
+      heading: branding.darkHeadingColor || branding.headingColor,
+      muted: branding.darkMutedColor || branding.textColor,
+      nav: branding.darkNavColor || branding.textColor,
+      navActive: branding.darkNavActiveColor || branding.surfaceColor,
+      surface: branding.darkSurfaceColor || branding.surfaceColor,
+      surfaceAccent: branding.darkSurfaceAccentColor || branding.surfaceColor,
+      surfaceDanger: branding.darkSurfaceDangerColor || "#3a2020",
+      surfaceMuted: branding.darkSurfaceMutedColor || branding.surfaceColor,
+      text: branding.darkTextColor || branding.textColor,
+      topbar: branding.darkTopbarColor || branding.darkBackgroundColor || branding.backgroundColor
+    };
+  }
+
+  return {
+    accent: branding.lightAccentColor || branding.accentColor,
+    accentStrong: branding.lightAccentStrongColor || branding.accentColor,
+    accentText: branding.lightAccentTextColor || "#193926",
+    background: branding.lightBackgroundColor || branding.backgroundColor,
+    border: branding.lightBorderColor || "#deded2",
+    borderAccent: branding.lightBorderAccentColor || "#c7dde0",
+    borderDanger: branding.lightBorderDangerColor || "#f1c5c5",
+    borderStrong: branding.lightBorderStrongColor || "#c9c9bd",
+    buttonPrimary: branding.lightButtonPrimaryColor || branding.lightAccentColor || branding.accentColor,
+    buttonPrimaryText: branding.lightButtonPrimaryTextColor || "#ffffff",
+    buttonSecondary: branding.lightButtonSecondaryColor || branding.lightSurfaceAccentColor || branding.surfaceColor,
+    buttonSecondaryBorder: branding.lightButtonSecondaryBorderColor || branding.lightBorderAccentColor || "#c7dde0",
+    buttonSecondaryText: branding.lightButtonSecondaryTextColor || branding.lightAccentStrongColor || branding.accentColor,
+    danger: branding.lightDangerColor || "#b42318",
+    heading: branding.lightHeadingColor || branding.headingColor,
+    muted: branding.lightMutedColor || branding.textColor,
+    nav: branding.lightNavColor || branding.textColor,
+    navActive: branding.lightNavActiveColor || branding.surfaceColor,
+    surface: branding.lightSurfaceColor || branding.surfaceColor,
+    surfaceAccent: branding.lightSurfaceAccentColor || branding.surfaceColor,
+    surfaceDanger: branding.lightSurfaceDangerColor || "#fff1f1",
+    surfaceMuted: branding.lightSurfaceMutedColor || branding.surfaceColor,
+    text: branding.lightTextColor || branding.textColor,
+    topbar: branding.lightTopbarColor || branding.lightBackgroundColor || branding.backgroundColor
+  };
+}
+
+function getContrastWarnings(branding: SiteBranding, theme: "light" | "dark") {
+  const colors = getDashboardThemeColors(branding, theme);
+  const pairs = [
+    ["Body text on page", colors.text, colors.background],
+    ["Body text on surface", colors.text, colors.surface],
+    ["Heading on surface", colors.heading, colors.surface],
+    ["Muted text on surface", colors.muted, colors.surface],
+    ["Nav text on header", colors.nav, colors.topbar],
+    ["Accent text on accent", colors.accentText, colors.accent],
+    ["Primary button text", colors.buttonPrimaryText, colors.buttonPrimary],
+    ["Secondary button text", colors.buttonSecondaryText, colors.buttonSecondary],
+    ["Accent link on accent surface", colors.accentStrong, colors.surfaceAccent],
+    ["Danger text on danger surface", colors.danger, colors.surfaceDanger]
+  ] as const;
+
+  return pairs
+    .map(([label, foreground, background]) => ({
+      label,
+      ratio: getContrastRatio(foreground, background),
+      theme: theme === "light" ? "Light" : "Dark"
+    }))
+    .filter((warning) => warning.ratio < 4.5);
+}
+
+function getContrastRatio(foreground: string, background: string) {
+  const foregroundRgb = parseHexColor(foreground);
+  const backgroundRgb = parseHexColor(background);
+
+  if (!foregroundRgb || !backgroundRgb) {
+    return 0;
+  }
+
+  const lighter = Math.max(getRelativeLuminance(foregroundRgb), getRelativeLuminance(backgroundRgb));
+  const darker = Math.min(getRelativeLuminance(foregroundRgb), getRelativeLuminance(backgroundRgb));
+
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+function parseHexColor(color: string) {
+  const match = color.trim().match(/^#([0-9a-fA-F]{6})$/);
+  if (!match) {
+    return null;
+  }
+
+  const value = match[1]!;
+  return {
+    r: Number.parseInt(value.slice(0, 2), 16),
+    g: Number.parseInt(value.slice(2, 4), 16),
+    b: Number.parseInt(value.slice(4, 6), 16)
+  };
+}
+
+function getRelativeLuminance(color: { r: number; g: number; b: number }) {
+  const channels = [color.r, color.g, color.b].map((channel) => {
+    const normalized = channel / 255;
+    return normalized <= 0.03928 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+  });
+
+  return channels[0]! * 0.2126 + channels[1]! * 0.7152 + channels[2]! * 0.0722;
 }
 
 function LinksPanel({
@@ -1141,8 +1489,13 @@ function HelpPanel() {
           <strong>Static content:</strong> Public page copy and layout live in React code. This dashboard manages metadata, colors, links, users, records, and uploads.
         </li>
         <li>
-          <strong>Uploads:</strong> Use local storage for development or Cloudinary for production. Replace/delete actions clean up old stored assets when metadata is
-          available.
+          <strong>Page template:</strong> Use `docs/page-setup-grid-layout.md` when adding new frontend pages. It includes the grid-template structure, class names, loading component, and final checks.
+        </li>
+        <li>
+          <strong>Layout settings:</strong> The Layout tab controls whether the public asides are static or scroll with the page for the current site record.
+        </li>
+        <li>
+          <strong>Uploads:</strong> Use local storage for development or Cloudinary for production. Replace/delete actions clean up old stored assets when metadata is available.
         </li>
         <li>
           <strong>API reference:</strong> Open `http://localhost:3001/docs` for Swagger UI or `http://localhost:3001/openapi.json` for the OpenAPI document.

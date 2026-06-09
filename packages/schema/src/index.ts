@@ -26,7 +26,8 @@ export const defaultSiteMetadata = {
   seoTitle: "",
   seoDescription: "",
   faviconUrl: "",
-  ogImageUrl: ""
+  ogImageUrl: "",
+  frontendAsideMode: "static" as "scroll" | "static"
 };
 
 export const defaultSiteBranding = {
@@ -63,6 +64,16 @@ export const defaultSiteBranding = {
   darkAccentStrongColor: "#9de4ec",
   lightAccentTextColor: "#193926",
   darkAccentTextColor: "#d6fbef",
+  lightButtonPrimaryColor: "#635bff",
+  darkButtonPrimaryColor: "#7c73ff",
+  lightButtonPrimaryTextColor: "#ffffff",
+  darkButtonPrimaryTextColor: "#ffffff",
+  lightButtonSecondaryColor: "#eef6f7",
+  darkButtonSecondaryColor: "#202833",
+  lightButtonSecondaryTextColor: "#005f69",
+  darkButtonSecondaryTextColor: "#9de4ec",
+  lightButtonSecondaryBorderColor: "#c7dde0",
+  darkButtonSecondaryBorderColor: "#435061",
   lightDangerColor: "#b42318",
   darkDangerColor: "#ff9b8f",
   lightNavActiveColor: "#e7f0e8",
@@ -80,7 +91,8 @@ export const SiteMetadataSchema = z.object({
   seoTitle: z.string().max(160).default(""),
   seoDescription: z.string().max(300).default(""),
   faviconUrl: z.string().url().or(z.literal("")).default(""),
-  ogImageUrl: z.string().url().or(z.literal("")).default("")
+  ogImageUrl: z.string().url().or(z.literal("")).default(""),
+  frontendAsideMode: z.enum(["scroll", "static"]).default("static")
 });
 
 export const SiteBrandingSchema = z.object({
@@ -117,6 +129,16 @@ export const SiteBrandingSchema = z.object({
   darkAccentStrongColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#9de4ec"),
   lightAccentTextColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#193926"),
   darkAccentTextColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#d6fbef"),
+  lightButtonPrimaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#635bff"),
+  darkButtonPrimaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#7c73ff"),
+  lightButtonPrimaryTextColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#ffffff"),
+  darkButtonPrimaryTextColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#ffffff"),
+  lightButtonSecondaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#eef6f7"),
+  darkButtonSecondaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#202833"),
+  lightButtonSecondaryTextColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#005f69"),
+  darkButtonSecondaryTextColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#9de4ec"),
+  lightButtonSecondaryBorderColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#c7dde0"),
+  darkButtonSecondaryBorderColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#435061"),
   lightDangerColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#b42318"),
   darkDangerColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#ff9b8f"),
   lightNavActiveColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#e7f0e8"),

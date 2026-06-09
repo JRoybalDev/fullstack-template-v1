@@ -1,8 +1,8 @@
 .public-page {
   --public-page-padding: var(--template-page-padding, clamp(24px, 5vw, 64px));
   --page-gap: clamp(18px, 3vw, 36px);
-  --static-aside-height: calc(100vh - var(--template-header-height, 76px) - (var(--template-header-offset, 0px) * 3));
-  --static-aside-top: calc(var(--template-header-height, 76px) + (var(--template-header-offset, 0px) * 2));
+  --static-aside-height: calc(100vh - var(--template-header-height, 76px) - (var(--template-header-offset, 0px) * 2));
+  --static-aside-top: calc(var(--template-header-height, 76px) + var(--template-header-offset, 0px));
   --template-body-min-height: 100vh;
   align-items: stretch;
   display: grid;

@@ -8,7 +8,7 @@ export const sites = pgTable("sites", {
   description: text("description").notNull().default(""),
   heroImageUrl: text("hero_image_url").notNull().default(""),
   metadata: jsonb("metadata")
-    .$type<{ tabTitle: string; seoTitle: string; seoDescription: string; faviconUrl: string; ogImageUrl: string }>()
+    .$type<{ tabTitle: string; seoTitle: string; seoDescription: string; faviconUrl: string; ogImageUrl: string; frontendAsideMode: "scroll" | "static" }>()
     .notNull()
     .default(defaultSiteMetadata),
   branding: jsonb("branding")

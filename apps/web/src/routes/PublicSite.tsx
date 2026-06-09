@@ -22,6 +22,7 @@ export function PublicSite() {
 
   const publishedSites = data?.filter((site) => site.published) ?? [];
   const featured = publishedSites[0];
+  const frontendAsideMode = featured?.metadata.frontendAsideMode ?? siteConfig.frontendAsideMode;
 
   useEffect(() => {
     if (!featured) {
@@ -55,7 +56,7 @@ export function PublicSite() {
 
   return (
     <section
-      className={`public-page page-full frontend-template-grid--asides-${siteConfig.frontendAsideMode}`}
+      className={`public-page page-full frontend-template-grid--asides-${frontendAsideMode}`}
       style={featured ? getPublicBrandingStyle(featured, resolvedTheme) : undefined}
     >
       <div className="frontend-template-grid">
@@ -97,7 +98,7 @@ export function PublicSite() {
                 <a href="/dashboard" className="btn btn-primary">
                   Open dashboard
                 </a>
-                <a href="http://localhost:3001/health" className="btn btn-ghost">
+                <a href="http://localhost:3001/health" className="btn btn-secondary">
                   API health <FiExternalLink aria-hidden />
                 </a>
               </div>
@@ -160,6 +161,11 @@ type PublicThemeColors = {
   borderAccent: string;
   borderDanger: string;
   borderStrong: string;
+  buttonPrimary: string;
+  buttonPrimaryText: string;
+  buttonSecondary: string;
+  buttonSecondaryBorder: string;
+  buttonSecondaryText: string;
   danger: string;
   heading: string;
   muted: string;
@@ -184,6 +190,11 @@ function getThemeColors(branding: SiteBranding, resolvedTheme: "light" | "dark")
       borderAccent: branding.darkBorderAccentColor || "#2b6871",
       borderDanger: branding.darkBorderDangerColor || "#6f3535",
       borderStrong: branding.darkBorderStrongColor || "#435061",
+      buttonPrimary: branding.darkButtonPrimaryColor || branding.darkAccentColor || branding.accentColor,
+      buttonPrimaryText: branding.darkButtonPrimaryTextColor || "#ffffff",
+      buttonSecondary: branding.darkButtonSecondaryColor || branding.darkSurfaceMutedColor || branding.surfaceColor,
+      buttonSecondaryBorder: branding.darkButtonSecondaryBorderColor || branding.darkBorderStrongColor || "#435061",
+      buttonSecondaryText: branding.darkButtonSecondaryTextColor || branding.darkAccentStrongColor || branding.accentColor,
       danger: branding.darkDangerColor || "#ff9b8f",
       heading: branding.darkHeadingColor || branding.headingColor,
       muted: branding.darkMutedColor || branding.textColor,
@@ -207,6 +218,11 @@ function getThemeColors(branding: SiteBranding, resolvedTheme: "light" | "dark")
     borderAccent: branding.lightBorderAccentColor || "#c7dde0",
     borderDanger: branding.lightBorderDangerColor || "#f1c5c5",
     borderStrong: branding.lightBorderStrongColor || "#c9c9bd",
+    buttonPrimary: branding.lightButtonPrimaryColor || branding.lightAccentColor || branding.accentColor,
+    buttonPrimaryText: branding.lightButtonPrimaryTextColor || "#ffffff",
+    buttonSecondary: branding.lightButtonSecondaryColor || branding.lightSurfaceAccentColor || branding.surfaceColor,
+    buttonSecondaryBorder: branding.lightButtonSecondaryBorderColor || branding.lightBorderAccentColor || "#c7dde0",
+    buttonSecondaryText: branding.lightButtonSecondaryTextColor || branding.lightAccentStrongColor || branding.accentColor,
     danger: branding.lightDangerColor || "#b42318",
     heading: branding.lightHeadingColor || branding.headingColor,
     muted: branding.lightMutedColor || branding.textColor,
@@ -233,6 +249,11 @@ function getPublicBrandingStyle(site: Site, resolvedTheme: "light" | "dark"): CS
     "--app-border-accent": colors.borderAccent,
     "--app-border-danger": colors.borderDanger,
     "--app-border-strong": colors.borderStrong,
+    "--app-button-primary": colors.buttonPrimary,
+    "--app-button-primary-text": colors.buttonPrimaryText,
+    "--app-button-secondary": colors.buttonSecondary,
+    "--app-button-secondary-border": colors.buttonSecondaryBorder,
+    "--app-button-secondary-text": colors.buttonSecondaryText,
     "--app-danger": colors.danger,
     "--app-heading": colors.heading,
     "--app-muted": colors.muted,
@@ -278,6 +299,11 @@ const publicTemplateVariableNames = [
   "--app-border-accent",
   "--app-border-danger",
   "--app-border-strong",
+  "--app-button-primary",
+  "--app-button-primary-text",
+  "--app-button-secondary",
+  "--app-button-secondary-border",
+  "--app-button-secondary-text",
   "--app-danger",
   "--app-heading",
   "--app-muted",
@@ -302,6 +328,11 @@ function setPublicTemplateColors(colors?: PublicThemeColors) {
     document.documentElement.style.setProperty("--app-border-accent", colors.borderAccent);
     document.documentElement.style.setProperty("--app-border-danger", colors.borderDanger);
     document.documentElement.style.setProperty("--app-border-strong", colors.borderStrong);
+    document.documentElement.style.setProperty("--app-button-primary", colors.buttonPrimary);
+    document.documentElement.style.setProperty("--app-button-primary-text", colors.buttonPrimaryText);
+    document.documentElement.style.setProperty("--app-button-secondary", colors.buttonSecondary);
+    document.documentElement.style.setProperty("--app-button-secondary-border", colors.buttonSecondaryBorder);
+    document.documentElement.style.setProperty("--app-button-secondary-text", colors.buttonSecondaryText);
     document.documentElement.style.setProperty("--app-danger", colors.danger);
     document.documentElement.style.setProperty("--app-heading", colors.heading);
     document.documentElement.style.setProperty("--app-muted", colors.muted);
